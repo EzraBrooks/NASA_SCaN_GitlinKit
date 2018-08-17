@@ -36,8 +36,8 @@ String         strTemperature, strPressure, strHumidity; // holds the values of 
 char           tempChar;
 const int      LASERRATE      = 2000;
 const int      CHAR_DELAY     = 30;// delay between individual characters of a message (nominally 30ms)
-const int      LED_RECEIVE    = 6; // Pin value for status lights.
-const int      LED_XMIT       = 5; // Pin value for status lights.
+const int      LED_RECEIVE_GOOD    = 6; // Pin value for status lights.
+const int      LED_RECEIVE_BAD       = 5; // Pin value for status lights.
 const int      LASERPIN       = 13;// Pin to drive laser output
 const int      PHOTOT_RECEIVE = 7; // Pin value for the phototransistor input.
 
@@ -63,8 +63,8 @@ void setup()
   laser.begin();                  // initialize the laser
 
   // Set up the LED pins to receive output from the Arduino to display status.
-  pinMode(LED_RECEIVE,  OUTPUT);
-  pinMode(LED_XMIT,     OUTPUT);
+  pinMode(LED_RECEIVE_GOOD,  OUTPUT);
+  pinMode(LED_RECEIVE_BAD,     OUTPUT);
   
 } //END of setup()
 
@@ -77,6 +77,7 @@ ISR(TIMER2_COMPA_vect)
   if (bit_bucket)
   {
     digitalWrite(LASERPIN, HIGH);
+    timelastchar = millis();
   }
   else
   {
@@ -87,13 +88,18 @@ ISR(TIMER2_COMPA_vect)
 void loop()
 {
   linkgood = !(millis() > (timelastchar + linktimeout));  // update the link status based on the timeout value
-  digitalWrite(LED_RECEIVE, LOW);
-  digitalWrite(LED_XMIT,   HIGH);
   if (linkgood)
   {
-    // Power RECEIVE LED if the link is good.
-    digitalWrite(LED_RECEIVE, HIGH);
-    digitalWrite(LED_XMIT,     LOW);
+    // Power the "GOOD LINK" LED if the link is good. N.b. that the LED is dumb, i.e. the LED
+    // will light up even if it's receiving interference/garbage. TODO make this more intelligent. -JA
+    digitalWrite(LED_RECEIVE_GOOD, HIGH);
+    digitalWrite(LED_RECEIVE_BAD,     LOW);
+  }
+  else
+  {
+    // Power the "LINK IS BAD" LED if the link is bad.
+    digitalWrite(LED_RECEIVE_GOOD, LOW);
+    digitalWrite(LED_RECEIVE_BAD,   HIGH);
   }
 } // end main loop()
 
