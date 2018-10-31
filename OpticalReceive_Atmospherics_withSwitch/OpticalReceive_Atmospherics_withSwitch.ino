@@ -57,7 +57,10 @@ String         parameterValue;      // holds the measurand being built up charac
 String         strTemperature, strPressure, strHumidity; // holds the values of the measurands
 char           tempChar;
 const int      LED_Temp = 6, LED_Press = 5, LED_Humid = 4;  // Pins for the Temp, Press, and Humidity LEDs
-const int      BUTTON_INPUT = 3; //Pin for button press input.
+const int      PIN_SWITCH_a = 3; 
+const int      PIN_SWITCH_b = 2; 
+bool           switch_a = 0;
+bool           switch_b = 0;
 
 // Pin value for the phototransistor input
 const int      PHOTOTRANSISTOR_RECEIVE = 7;
@@ -91,7 +94,8 @@ void setup()
   // is being displayed
   pinMode(LED_Temp, OUTPUT);
   pinMode(LED_Humid, OUTPUT);
-  
+  pinMode(PIN_SWITCH_a, INPUT);
+  pinMode(PIN_SWITCH_b, INPUT);
 }
 
 // Set up an interrupt service routine to receive characters
@@ -140,51 +144,67 @@ void loop()
     }
   }
 
-  linkgood = !(millis() > (timelastchar + linktimeout));  // update the link status based on the timeout value
+ linkgood = !(millis() > (timelastchar + linktimeout));  // update the link status based on the timeout value
 
-  if (linkgood)
-  {
-   // cycle through displaying the values if the link is good
-   if (timetoswitch)
+ if (linkgood)
+ {
+   switch_a = digitalRead(PIN_SWITCH_a);
+   switch_b = digitalRead(PIN_SWITCH_b);
+   Serial.print("A: " + (String)switch_a + "\t");
+   Serial.println("B: " + (String)switch_b);
+   if(!(switch_a) && (switch_b))
    {
-    timenow=millis();
-     switch (measurand)
+     displayValue(strTemperature);
+     digitalWrite(LED_Temp, HIGH);
+   }
+   if(!(switch_b) && (switch_a))
+   {
+     displayValue(strHumidity);
+     digitalWrite(LED_Humid, HIGH);    
+   }
+   if(switch_a && switch_b)
+   {
+     // cycle through displaying the values if the link is good
+     if (timetoswitch)
      {
-       case 1:
-         displayValue(strTemperature + " F");
-         digitalWrite(LED_Temp, HIGH);
-         break;
-       case 2:
-         displayValue(strHumidity + " %h");
-         digitalWrite(LED_Humid, HIGH);
-         break;
+      timenow=millis();
+       switch (measurand)
+       {
+         case 1:
+           displayValue(strTemperature);
+           digitalWrite(LED_Temp, HIGH);
+           break;
+         case 2:
+           displayValue(strHumidity);
+           digitalWrite(LED_Humid, HIGH);
+           break;
+        }
       }
-    }
-
-    // determine if it is time to switch the display to the next measurand
-    if(millis() >= (timenow+displayperiod))
-    {
-      lc.clearDisplay(0);
-      digitalWrite(LED_Temp, LOW);
-      digitalWrite(LED_Humid, LOW);
-      timetoswitch = true;
-      measurand++;
-      if (measurand > 2)
+      // determine if it is time to switch the display to the next measurand
+      if(millis() >= (timenow+displayperiod))
       {
-        measurand=1;
+        lc.clearDisplay(0);
+        digitalWrite(LED_Temp, LOW);
+        digitalWrite(LED_Humid, LOW);
+        timetoswitch = true;
+        measurand++;
+        if (measurand > 2)
+        {
+          measurand=1;
+        }
+      } 
+      else 
+      {
+        timetoswitch = false;
       }
-    } 
-    else 
-    {
-      timetoswitch = false;
-    }
-  } //end IFCHECK (link good?)
-  else
-  {
-  // link is bad, so display a distinctive pattern,
-  // turn off the individual LEDs, and blank out the measurands
-    if (!blankedvalues)
-    {
+   }
+ } //end IFCHECK (link good?)
+ else
+ {
+ // link is bad, so display a distinctive pattern,
+ // turn off the individual LEDs, and blank out the measurands
+   if (!blankedvalues)
+   {
       blankedvalues=true;
       digitalWrite(LED_Temp, LOW);
       digitalWrite(LED_Humid, LOW); 

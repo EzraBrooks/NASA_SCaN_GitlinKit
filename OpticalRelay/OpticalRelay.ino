@@ -51,11 +51,12 @@ void setup()
 {
   Serial.begin(9600);                 // start the serial port on the Arduino
   
-  // *** FOR THE MODULES THAT JIMMY BOUGHT, THIS NEEDS TO BE FLIPPED W/R/T TOM'S RECEIVERS ***
+  
   phototransistor.set_speed(laserreceivespeed);        // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz)
   phototransistor.set_rxpin(PHOTOT_RECEIVE);           // pin the phototransistor is connected to
   phototransistor.set_txpin(LASERPIN);      // pin the laser is connected to
-  phototransistor.set_inverted(false);                 // if receive signal is inverted (Laser on = logic 0) set this to true
+  // *** FOR THE MODULES THAT JIMMY BOUGHT, THIS NEEDS TO BE FLIPPED W/R/T TOM'S RECEIVERS (true for a QRD proper, false for bobo versions.)***
+  phototransistor.set_inverted(true);                 // if receive signal is inverted (Laser on = logic 0) set this to true
   phototransistor.begin();                             // initialize the receiver
   
   laser.set_speed(LASERRATE);     // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz)
