@@ -174,3 +174,10 @@ libraries/Adafruit_Circuit_Playground/examples/analog_sensors/analog_sensors.ino
 libraries/Adafruit_Circuit_Playground/examples/CircuitPlaygroundFirmata/CircuitPlaygroundFirmata.ino
 libraries/Adafruit_Circuit_Playground/examples/CircuitPlaygroundFirmata_Express_CodeOrg/.cplayClassic.test.skip
 libraries/Adafruit_Circuit_Playground/examples/CircuitPlaygroundFirmata_Express_CodeOrg/CircuitPlaygroundFirmata_Express_CodeOrg.ino
+LaserRelayCAD/~$LR_enclosure_base_v1.SLDPRT
+LaserRelayCAD/~$LR_laserenclosure_dish.SLDPRT
+LaserRelayCAD/~$LR_MAX7219_display.SLDPRT
+LaserRelayCAD/~$LR_RECV.SLDASM
+LaserRelayCAD/~$LR_RECV_hat.SLDASM
+LaserRelayCAD/~$LR_RECV_lid_v0.SLDPRT
+LaserRelayCAD/~$UNO board.SLDPRT
