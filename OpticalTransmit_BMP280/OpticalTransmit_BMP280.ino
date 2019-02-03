@@ -62,7 +62,8 @@ void setup() {
 
 // Set up an interrupt service routine to transmit characters
 // Arduino Timer2 interrupt toggles the LIGHT_SEND_PIN at the laser send speed to transmit each half bit
-ISR(TIMER2_COMPA_vect){
+ISR(TIMER2_COMPA_vect)
+{
   laser.transmit(); // transmit a character if one is ready
 }
 
@@ -108,7 +109,8 @@ void loop() {
 
   }
 
-  void  laserTransmit(String xmitmsg){
+  void  laserTransmit(String xmitmsg)
+  {
    for (i=0; i<(xmitmsg.length()+1); i++){  // transmit the string byte by byte
       incomingByte=xmitmsg.charAt(i);       // get the character at position i
       //Serial.print(incomingByte);
