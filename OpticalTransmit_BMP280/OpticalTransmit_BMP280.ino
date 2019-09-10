@@ -42,13 +42,15 @@ uint16_t msg;                 // varible to hold the message (character)
 int LED_SensorError = 5;      // Pin for an LED to indicate something is wrong with the sensor
 int i;                        
 
-void setup() {
+void setup() 
+{
   pinMode(LED_SensorError, OUTPUT);
   Serial.begin(9600);
 
   // Check for the sensor. If there is an error, blink the SensorError LED
-  while (!bme.begin()) {  
-    //Serial.println(F("Could not find the temp/humidity/pressure sensor. Check the I2C address and/or wiring"));
+  while (!bme.begin()) 
+  {  
+    Serial.println(F("Could not find the temp/humidity/pressure sensor. Check the I2C address and/or wiring"));
     digitalWrite(LED_SensorError, HIGH);
     delay (500);
     digitalWrite(LED_SensorError, LOW);
@@ -67,56 +69,49 @@ ISR(TIMER2_COMPA_vect)
   laser.transmit(); // transmit a character if one is ready
 }
 
-void loop() {
+void loop() 
+{
+  temperature = bme.readTemperature();  // read the temperature from the sensor. Pemperature is returned in degrees C
+  pressure = bme.readPressure()/100;    // read the pressure. Pressure is returned in Pascals, divide by 100 to get millibars
+  humidity = bme.readHumidity();        // read the humidity. Humidity is returned in percent relative humidity
 
-    temperature = bme.readTemperature();  // read the temperature from the sensor. Pemperature is returned in degrees C
-    pressure = bme.readPressure()/100;    // read the pressure. Pressure is returned in Pascals, divide by 100 to get millibars
-    humidity = bme.readHumidity();        // read the humidity. Humidity is returned in percent relative humidity
-
-    // if english units are desired, perform the conversion
-    if (english) {
-      temperature = temperature * 1.8 + 32.0; // convert C to F
-      pressure = pressure * 0.029533;         // convert millibars to inches of mercury hg
-    }
-
- // Test values
- //temperature=-345.678;
- //pressure=-1.11;
- //humidity=88.88;
- 
-    strTemperature=String(temperature)+="T";
-    //Serial.print(F("Temp: "));
-    //Serial.print(strTemperature);
-    laserTransmit(strTemperature);
-    
-    delay(delaytime);
-    
-    strPressure=String(pressure)+="P";
-    //Serial.print(F("Pressure: "));
-    //Serial.print(strPressure);
-    laserTransmit(strPressure);
-
-    delay(delaytime);
-    
-    strHumidity=String(humidity)+="H";
-    //Serial.print(F("Humidity: "));
-    //Serial.print(strHumidity);
-    laserTransmit(strHumidity);
-    
-    delay(delaytime);
-    
-    //Serial.println();
-
-  }
-
-  void  laserTransmit(String xmitmsg)
+  // if english units are desired, perform the conversion
+  if (english) 
   {
-   for (i=0; i<(xmitmsg.length()+1); i++){  // transmit the string byte by byte
-      incomingByte=xmitmsg.charAt(i);       // get the character at position i
-      //Serial.print(incomingByte);
-      msg = hamming_byte_encoder(incomingByte); // encode the character
-      laser.manchester_modulate(msg);       // modulate the character using the laser
-      delay(intercharacterdelay); // wait delay between transmitting individual characters of the message
-    }
+    temperature = temperature * 1.8 + 32.0; // convert C to F
+    pressure = pressure * 0.029533;         // convert millibars to inches of mercury hg
   }
+  strTemperature=String(temperature)+="T";
+  Serial.print(F("Temp: ")); Serial.print(strTemperature);
+  laserTransmit(strTemperature);
+  
+  delay(delaytime);
+  
+  strPressure=String(pressure)+="P";
+  //Serial.print(F("Pressure: "));
+  //Serial.print(strPressure);
+  laserTransmit(strPressure);
 
+  delay(delaytime);
+  
+  strHumidity=String(humidity)+="H";
+  //Serial.print(F("Humidity: "));
+  //Serial.print(strHumidity);
+  laserTransmit(strHumidity);
+  
+  delay(delaytime);
+  
+  //Serial.println();
+}
+
+void  laserTransmit(String xmitmsg)
+{
+ for (i=0; i<(xmitmsg.length()+1); i++)
+ {  // transmit the string byte by byte
+    incomingByte=xmitmsg.charAt(i);       // get the character at position i
+    //Serial.print(incomingByte);
+    msg = hamming_byte_encoder(incomingByte); // encode the character
+    laser.manchester_modulate(msg);       // modulate the character using the laser
+    delay(intercharacterdelay); // wait delay between transmitting individual characters of the message
+  }
+}
