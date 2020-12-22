@@ -63,9 +63,10 @@ const int      BUTTON_INPUT = 3; //Pin for button press input.
 const int      PHOTOTRANSISTOR_RECEIVE = 7;
 
 // Pin values for MAX72XX 8-digit LED display:
-const int      DISPLAY_DATAIN = 12;    
-const int      DISPLAY_CLOCK  = 11;
-const int      DISPLAY_LOAD   = 10;
+const int      DISPLAY_DATAIN = 12; 
+const int      DISPLAY_LOAD   = 11;
+const int      DISPLAY_CLOCK  = 10;
+
 const int      DISPLAY_NUMBER_OF_DISPLAYS = 1;
 LedControl     lc = LedControl(DISPLAY_DATAIN, DISPLAY_CLOCK, DISPLAY_LOAD, DISPLAY_NUMBER_OF_DISPLAYS);
 OpticalReceiver phototransistor;  // create an instance of the receiver
