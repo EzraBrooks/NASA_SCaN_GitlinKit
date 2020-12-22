@@ -102,16 +102,9 @@ void loop()
         parameterValue="";
         Serial.print("Temp: ");
         Serial.println(strTemperature);
-/*
         LCDString("Temp: ");
-        displayTemp = strTemperature;
-        int str_len = displayTemp.length() + 1; 
-        char char_array[str_len];
-        displayTemp.toCharArray(char_array, str_len);
-        LCDString(char_array);
-  */      
-        LCDString("Temp: ");
-        displayValue(strTemperature);
+        //Using c_str to convert a String object to an array of chars
+        LCDString(strTemperature.c_str());
         delay(1000);
         break;
       case 80:        // ASCII P termination character for pressure, use string built to this point for pressure
@@ -132,7 +125,7 @@ void loop()
         Serial.print("Humi: ");
         Serial.println(strHumidity);
         LCDString("Humi: ");
-        displayValue(strHumidity);
+        LCDString(strHumidity.c_str());
         delay(1000);
         break;
       default :
@@ -179,29 +172,3 @@ void loop()
     }
   }*/
 } // end main loop
-
-// This function is written to drive a NOKIA display
-void displayValue(String msgtodisplay)
-{     
-  int i, strlength;
-  strlength=msgtodisplay.length();
-
-  if ((strlength>0))
-  {
-    //Serial.print(msgtodisplay); Serial.print(" Length: "); Serial.print(strlength);
-    //Serial.print(" Decimal: "); Serial.println(decimalatposition);
-
-      for (i=0;i<strlength;i++)
-      {
-         //lc.setChar(0,strlength-2-i,msgtodisplay.charAt(i),false);
-         LCDCharacter(msgtodisplay.charAt(i));
-      }
-//    LCDString(msgtodisplay);
-  }
-  else 
-  {
-    // display an error message on the display
-    // if the message is invalid
-    LCDString("-ERROR-");
-  }
-}
