@@ -149,16 +149,26 @@ void loop()
           pkt.terminator == '\x04')
       {
         // COMPLETE PACKET HAS ARRIVED
-        //Serial.print("Temp: \t"); Serial.println(pkt.temperature);
-        //Serial.print("Humi: \t"); Serial.println(pkt.humidity);
         //LCDClear();
         temperature_F = (pkt.temperature * 9/5) + 32; // Convert to awkward imperial units.
-        strTemper       = "Temp: " + String(pkt.temperature) + " `C" + '\n';
-        strTemperFahren = "      " + String(temperature_F) + " `F" + '\n';
-        strHumidi       = "Humi: " + String(pkt.humidity) + "%";
+        if (pkt.temperature < 1) //hacking in error messages for empty display
+        {
+          strTemper       = " ERROR `C";
+          strTemperFahren = " ERROR `F";          
+        }
+        else
+        {
+          strTemper       = "  " + String(pkt.temperature) + "`C   "; //TODO ADD NEWLINES ONCE YOU FIGURE IT OUT
+          strTemperFahren = "  " + String(temperature_F) + "`F  ";          
+        }
+        strHumidi       = "  " + String(pkt.humidity) + "% hum";
+        Serial.print("TempC: \t"); Serial.println(pkt.temperature);
+        Serial.print("TempF: \t"); Serial.println(temperature_F);
+        Serial.print("Humid: \t"); Serial.println(pkt.humidity);
         LCDString(strTemper.c_str());
         LCDString(strTemperFahren.c_str());
         LCDString(strHumidi.c_str());
+        delay(2500); // TODO REMOVE THIS LATER -- JUST A TEMP STOP UNTIL I RE-WORK THE TEXT ANIMATION
         reset_packet();
       }
       else if (receive_count > sizeof(union packet) + 1)
