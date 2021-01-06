@@ -28,6 +28,19 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320(); // create an I2C instance to talk to
 #include <HammingEncDec.h>    // include the Hamming encoder/decoder functionality
 #include <OpticalModDemod.h>  // include the modulator/demodulator functionality
 
+// new packet structure by Dan "Memes" Koris
+typedef union packet
+{
+    char bytes[10];
+    struct 
+    {
+        byte  starter      = '\x01';
+        float temperature  = 0.0f;
+        float humidity     = 0.0f;
+        byte  terminator   = '\x04';
+    }; 
+};
+
 OpticalTransmitter laser;     // create an instance of the transmitter
 
 unsigned long delaytime = 500;  // delay between transmitting measurands in milliseconds (nominally 500ms)
@@ -78,26 +91,27 @@ void loop()
     {
       temperature = temperature * 1.8 + 32.0; // convert C to F
     }
- 
-    strTemperature=String(temperature)+="T";
-    laserTransmit(strTemperature);
+    
+    union packet pkt;
+    pkt.starter     = '\x01';
+    pkt.temperature = 69; //temp debug static values 
+    pkt.humidity    = 420;
+    //pkt.temperature = temperature;
+    //pkt.humidity    = humidity;
+    pkt.terminator  = '\x04';
+    
+    laserTransmit(pkt);
     delay(delaytime);
      
-    strHumidity=String(humidity)+="H";
-    laserTransmit(strHumidity);
-    delay(delaytime);
-
+    
 } //END of loop()
 
-void  laserTransmit(String xmitmsg)
+void  laserTransmit(union packet pkt)
 {
-   for (i=0; i<(xmitmsg.length()+1); i++)   // transmit the string byte by byte
-   {
-      incomingByte=xmitmsg.charAt(i);       // get the character at position i
-      //Serial.print(incomingByte);
-      msg = hamming_byte_encoder(incomingByte); // encode the character
-      laser.manchester_modulate(msg);       // modulate the character using the laser
-      delay(CHAR_DELAY);                    // wait delay between transmitting individual characters of the message
-    }
+  for (int i = 0; i < sizeof(union packet); i++)
+  {
+      uint16_t encoded_msg = hamming_byte_encoder(pkt.bytes[i]);
+      laser.manchester_modulate(encoded_msg);       // modulate the character using the laser
+      delay(CHAR_DELAY);
+  }
 } // END of laserTransmit()
-

@@ -20,9 +20,22 @@
   
 ***************************************************************************/
 #include "Nokia_LCD_functions.h" //include library to drive NOKIA display
-#include "LedControl.h"           // include the library to drive the MAX72XX LED Control
 #include <HammingEncDec.h>        // include the Hamming encoder/decoder functionality
 #include <OpticalModDemod.h>      // include the modulator/demodulator functionality
+
+// new packet structure by Dan "Memes" Koris
+typedef union packet
+{
+    char bytes[10];
+    struct 
+    {
+        byte  starter      = '\x01';
+        float temperature  = 0.0f;
+        float humidity     = 0.0f;
+        byte  terminator   = '\x04';
+    }; 
+};
+
 
 int            linktimeout = 1000;    // if no valid characters received in this time period, assume the link is bad
 int            displayperiod = 2500;  // how long to keep a number displayed (in ms, 1000 ms = 1 second)
@@ -37,7 +50,11 @@ bool           linkgood;              // flag to store optical link status
 bool           timetoswitch;          // flag to cycle through the measurands
 bool           blankedvalues;         // flag to determine if values have been blanked for a bad laser link
 unsigned long  timenow;               // holds the Arduino running time in milliseconds for display times
-bool           displayChanged;         //checks to clear screen if display has changed 
+bool           displayChanged;         //checks to clear screen if display has changed
+int            receive_count = 0; // global
+union          packet pkt; // global receive buffer
+bool           valid_read = false; // global to indicate the quality of our data.
+
                                       
 /* IMPORTANT: The Delay function is used sparingly because it stalls program execution
 (except for interrupts) and can affects the ability to check if characters are ready. */
@@ -60,7 +77,8 @@ OpticalReceiver phototransistor;  // create an instance of the receiver
 void setup()
 {
   Serial.begin(9600);                 // start the serial port on the Arduino
-  
+  Serial.print("Size of union-packet: ");
+  Serial.println(sizeof(union packet));  
   phototransistor.set_speed(laserreceivespeed);             // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz)
   phototransistor.set_rxpin(PHOTOTRANSISTOR_RECEIVE);       // pin the phototransistor is connected to
   phototransistor.set_inverted(true);                       // if receive signal is inverted (Laser on = logic 0) set this to true
@@ -81,94 +99,59 @@ ISR(TIMER2_COMPA_vect)
 
 void loop()
 {
-  displayChanged = false;
-  //LCDString("WAITING FOR LASER");
-  c = phototransistor.GetByte();     // get a character from the laser receiver if one is available
-  
-  if (c>0)
-  {
-   // if a character is ready, look at it
-   //Serial.println(c);
-   //tempChar=(char)c;
-   //Serial.println(tempChar);
-    blankedvalues=false;
-    timelastchar=millis();
-    LCDClear();
-    switch (c)
-    {       
-      // if the character is a terminator, store what was built in a variable and display it
-      case 84:         // ASCII T termination character for temperature, use string built to this point for temp
-        strTemperature=parameterValue;
-        parameterValue="";
-        Serial.print("Temp: ");
-        Serial.println(strTemperature);
-        LCDString("Temp: ");
-        //Using c_str to convert a String object to an array of chars
-        LCDString(strTemperature.c_str());
-        delay(1000);
-        break;
-      case 80:        // ASCII P termination character for pressure, use string built to this point for pressure
-        strPressure=parameterValue;
-        parameterValue="";
-        /*
-         * Don't care about pressure right now; it doesn't change much.
-        Serial.print("Pres: ");
-        Serial.println(strPressure);
-        LCDString("Pres: ");
-        displayValue(strPressure); 
-        delay(1000);
-        */
-        break;    
-      case 72:        // ASCII H termination character for humidity, use string built to this point for humidity
-        strHumidity=parameterValue;
-        parameterValue="";
-        Serial.print("Humi: ");
-        Serial.println(strHumidity);
-        LCDString("Humi: ");
-        LCDString(strHumidity.c_str());
-        delay(1000);
-        break;
-      default :
-        //Serial.println(parameterValue);
-        parameterValue=parameterValue+=(char)c;  // keep building a string character-by-character until a terminator is found
-    }
-  }
-/*
-  linkgood = !(millis() > (timelastchar + linktimeout));  // update the link status based on the timeout value
-  if (linkgood)
-  {
-   //goToXY(10, 30);
-   if (displayChanged)
-   {
-      LCDClear() ;
-   }
-   LCDString("LINK IS GOOD");
 
-   // cycle through displaying the values if the link is good
-   if (timetoswitch)
-   {
-    timenow=millis();
-     switch (measurand)
-     {
-       case 1:
-         displayTemp = strTemperature + "F";
-         int str_len = displayTemp.length() + 1; 
+  displayChanged = false;
+  //Serial.print("T: \t");  Serial.print(pkt.temperature);
+  //Serial.print("\t H: \t"); Serial.println(pkt.humidity);
+  //LCDString("WAITING FOR LASER");
+  // block here waiting for a byte to be received
+    byte received_byte;
+    bool good_data_read = phototransistor.GetByte(received_byte);
  
-         // Prepare the character array (the buffer) 
-         char char_array[str_len];
-           
-         // Copy it over 
-         displayTemp.toCharArray(char_array, str_len);
-         LCDString(char_array);
-         //LCDString(strTemperature.toCharArray());
-         //digitalWrite(LED_Temp, HIGH);
-         break;
-       case 2:
-         //LCDString(strHumidity);
-         displayHumid = strHumidity + " %h";
-         //digitalWrite(LED_Humid, HIGH);
-         break;
+    if (good_data_read)
+    {
+      if (valid_read)
+      {
+          pkt.bytes[receive_count++] = received_byte;
+          Serial.print("Received: \t"); Serial.println(received_byte);
+  
+          if (pkt.starter    == '\x01' &&
+              pkt.terminator == '\x04')
+          {
+              // COMPLETE PACKET HAS ARRIVED
+              Serial.print("Temp: \t");
+              Serial.println(pkt.temperature);
+              Serial.print("Humi: \t");
+              Serial.println(pkt.humidity);
+              LCDClear();
+              String foobar = "Temp: " + String(pkt.temperature) + '\n';
+              String foobar2 = "Humi: " + String(pkt.humidity);
+              LCDString(foobar.c_str());
+              LCDString(foobar2.c_str());
+              reset_packet();
+          }
+          else if (receive_count > sizeof(union packet) + 1)
+          {
+              reset_packet();
+              Serial.println("Packet's full; reset packet.");
+          }
+      }
+      else
+      {
+          if (received_byte == '\x01')
+          {
+              Serial.println("Starting new packet. I'm excited!");
+              valid_read = true;
+              pkt.bytes[receive_count++] = received_byte;
+          }
+          //Serial.println("INVALID READ");
       }
     }
-  }*/
 } // end main loop
+
+void reset_packet()
+{
+    valid_read    = false;
+    receive_count = 0;
+    memset(&pkt, 0, sizeof(union packet));
+}

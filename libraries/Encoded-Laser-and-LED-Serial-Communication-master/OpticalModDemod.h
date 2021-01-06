@@ -308,12 +308,14 @@ class OpticalReceiver
 		//	} 
 		//}
 		
-		uint8_t GetByte()
+		//Restructuring this to suppress some of the noise of 'bad' data reads while waiting for laser signal
+		bool GetByte(uint8_t &c)
 		{
 			if(char_ready)
 			{
 				char_ready = 0;
-				return(msg_done);
+				c = msg_done;
+				return(1);
 			} else {
 				return (0);
 			}
