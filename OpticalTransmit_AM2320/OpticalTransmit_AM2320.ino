@@ -44,7 +44,7 @@ const unsigned long DELAY_TIME     = 500;  // delay between transmitting measura
 class SensorTransmitterInterface
 {
 public:
-    virtual ~TransmitterInterface(){}
+    virtual ~TransmitterInterface(){};
     virtual void read_sensor() = 0;
     virtual void transmit()    = 0;
 };
@@ -85,7 +85,7 @@ public:
         char_delay_    (char_delay    ),
         transmit_delay_(transmit_delay)
         
-    {}
+    {};
 
     //=============================================================================================
     // CLASS API
@@ -94,7 +94,9 @@ public:
     virtual void read_sensor()
     {
         temperature_ = sensor_.readTemperature();
+        Serial.print("Temp: \t" + temperature_);
         humidity_    = sensor_.readHumidity();
+        Serial.print("Humi: \t" + humidity_);
     }
     
     virtual void transmit()
@@ -111,7 +113,7 @@ public:
         
         // Waiting for the whole packet to go out (not sure this is needed)
         delay(transmit_delay_);
-    }
+    };
     
     //=============================================================================================
     // INTERNAL OPERATIONS
@@ -127,7 +129,7 @@ private:
         pkt.terminator  = '\x04';
         
         return pkt;
-    }
+    };
     
     //=============================================================================================
     // INTERNAL DATA
@@ -159,6 +161,10 @@ void setup()
     
     pinMode(PIN_LED_SENSOR, OUTPUT);
     Serial.begin(9600);
+    Serial.println("==================================================");
+    Serial.println("NASA SCaN 'GitlinKit' Laser Relay - Transmitter");
+    Serial.println("Powering on...");
+    Serial.println("==================================================");
   
     //=============================================================================================
     // Initialize our dependencies
@@ -208,4 +214,3 @@ void loop()
     transmitter->read_sensor();
     transmitter->transmit();
 } /*END of loop() */
-
