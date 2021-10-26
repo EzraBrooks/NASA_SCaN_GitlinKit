@@ -14,6 +14,8 @@ float          temperature_F = 0.0f;    // variable for a Fahrenheit conversion
 String         strTemperFahren;         // string for a Fahrenheit conversion
 char screen_line[12]; //array holding line we will display to the nokia screen
 const uint8_t  NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
+const int      LASER_TRANSMIT_SPEED = 2000;
+const uint8_t  PIN_PHOTOTRANSISTOR = 2;
 
 const unsigned char nasa_worm_BMP [] = {
 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x20, 0x20, 0x70, 0x20, 0x20, 0x00, 0x00,
@@ -54,9 +56,9 @@ const unsigned char nasa_worm_BMP [] = {
 void setup() 
 {
   Serial.begin(9600);                 // start the serial port on the Arduino
-  Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on.");
-  phototransistor.set_speed(2000);             // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz)
-  phototransistor.set_rxpin(2);       // pin the phototransistor is connected to
+  Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on RECEIVER.");
+  phototransistor.set_speed(LASER_TRANSMIT_SPEED);          // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz)
+  phototransistor.set_rxpin(PIN_PHOTOTRANSISTOR);           // pin the phototransistor is connected to
   phototransistor.set_inverted(true);                       // if receive signal is inverted (Laser on = logic 0) set this to true
   phototransistor.begin();                                  // initialize the receiver
 
@@ -90,6 +92,8 @@ void loop()
     {       
       // if the character is a terminator, store what was built in a variable and display it
       case 0:
+        //This means a full packet is complete, so now we can push a screen update. Do this sparingly, as it can slow down the program
+        //and goober the data stream; things have relatively tight processor tolerances right now.
         //LCDClear();
         memset(screen_line, ' ',NOKIA_SCREEN_MAX_CHAR_WIDTH); //As part of our manual NewLine hack, build a blank 12-char array of spaces
         concatenatedTemperatureString = String("T: ") + strTemperature + String("C");
@@ -100,7 +104,7 @@ void loop()
         LCDString(screen_line);
         
         memset(screen_line, ' ',NOKIA_SCREEN_MAX_CHAR_WIDTH); //As part of our manual NewLine hack, build a blank 12-char array of spaces
-        concatenatedHumidityString = String("H: ") + strHumidity + String("%");
+        concatenatedHumidityString = String("Hmd: ") + strHumidity + String("%");
         for (int i = 0; (i < concatenatedHumidityString.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
         {
           screen_line[i] = concatenatedHumidityString[i];
