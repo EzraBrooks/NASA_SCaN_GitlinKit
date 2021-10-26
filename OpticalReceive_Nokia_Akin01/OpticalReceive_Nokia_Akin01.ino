@@ -143,18 +143,23 @@ void loop()
         switch (ellipsis_iterator)
         {
           case 0:
-            LCDClear();
-            LCDString("No laser     ");
+            nokiaPrintLine("No laser  ");
             break;
           case 1:
-            LCDString("No laser.    ");
+            nokiaPrintLine("No laser. ");
             break;
           case 2:
-            LCDString("No laser..   ");
+            nokiaPrintLine("No laser..  ");
             break;
           case 3:
-            LCDString("No laser...  ");
+            nokiaPrintLine("No laser...");
+            delay(25);
             break;
+          case 4:
+            nokiaPrintLine("No laser...");
+            delay(25);
+            LCDClear();  
+            break;        
           default:
             ellipsis_iterator = 0;
             break;
@@ -171,7 +176,7 @@ void loop()
 } // end main loop
 
 void nokiaPrintLine(String display_this_message)
-//Builds an array of a full line (12 blank chars by default), then writes our intended string in until it's full, then displays.
+//Builds an array of a full line (12 blank chars by default), then overwrites our intended string char by char until it's done or full, then displays.
 //Will truncate anything passed to it that's more than NOKIA_SCREEN_MAX_CHAR_WIDTH.
 //This is a hack to support the otherwise lack of newline for the Nokia. Credit to DanK "Memes" Koris.
 {
