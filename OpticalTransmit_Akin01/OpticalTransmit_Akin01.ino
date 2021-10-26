@@ -51,10 +51,12 @@ void loop()
     }
  
     strTemperature=String(temperature)+="T";
+    Serial.println(strTemperature);
     laserTransmit(strTemperature);
     delay(delaytime);
     
     strHumidity=String(humidity)+="H";
+    Serial.println(strHumidity);
     laserTransmit(strHumidity);
     delay(delaytime);
 
