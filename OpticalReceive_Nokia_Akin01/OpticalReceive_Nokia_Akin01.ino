@@ -13,8 +13,9 @@ float          temperature_F = 0.0f;    // variable for a Fahrenheit conversion 
 String         strTemperFahren;     // string for a Fahrenheit conversion TODO
 
 
-char           screen_line[12];     //array holding a line we will build, then display to the nokia screen (gives us Newline functionality)
+
 const uint8_t  NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
+char           screen_line[NOKIA_SCREEN_MAX_CHAR_WIDTH];     //array holding a line we will build, then display to the nokia screen (gives us Newline functionality)
 const int      LASER_TRANSMIT_SPEED = 2000; //Don't edit this unless you really know what you're doing. Keeps TX and RX in phase.
 const uint8_t  PIN_PHOTOTRANSISTOR = 2; //Pin on the Arduino for the phototransistor (receiver 'eye')
 
@@ -25,6 +26,7 @@ bool           is_the_link_good = true; //boolean for the same bad link decision
 const long int ANTISPAM_COUNTER_MAX = 16000;
 int            antispam_counter = 0;
 uint8_t        ellipsis_iterator = 0; //iterator to animate a ".  " ".. " "..."
+uint8_t        j = 0; //iterator to periodically clear the screen to avoid too much pile-up of junk
 
 const unsigned char nasa_worm_BMP [] = {
   0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x20, 0x20, 0x70, 0x20, 0x20, 0x00, 0x00,
@@ -95,6 +97,15 @@ void loop()
   {
     // if a character is ready, look at it
     Serial.println(c);
+    if (j < 101) //arbitrary number 
+    {
+      j++;
+    }
+    else
+    {
+      j = 0;
+      LCDClear(); //Periodically reset the screen every _n_ receives, just for cleanliness.
+    }
     time_since_last_character_received = millis(); //pulls the time elapsed from the Arduino startup in and stores it
     switch (c)
     {
@@ -103,20 +114,20 @@ void loop()
         //This means a full packet is complete, so now we can push a screen update. Do this sparingly, as it can slow down the program
         //and goober the data stream; things have relatively tight processor tolerances right now.
         //LCDClear();
-        concatenatedTemperatureString = String("T: ") + strTemperature + String("C");
+        concatenatedTemperatureString = String("T: ") + strTemperature + String(" C");
         nokiaPrintLine(concatenatedTemperatureString);
-        concatenatedHumidityString = String("Hmd: ") + strHumidity + String("%");
+        concatenatedHumidityString = String("Hmd: ") + strHumidity + String("%   ");
         nokiaPrintLine(concatenatedHumidityString);
         break;
       case 84:         // ASCII T termination character for temperature, use string built to this point for temp
         strTemperature = parameterValue;
         parameterValue = "";
-        Serial.print("*== TEMP:  ");Serial.print(strTemperature);Serial.println(" C ==*");
+        Serial.print("*= TEMP:  ");Serial.print(strTemperature);Serial.println(" C =*");
         break;
       case 72:        // ASCII H termination character for humidity, use string built to this point for humidity
         strHumidity = parameterValue;
         parameterValue = "";
-        Serial.print("*-- HUMID: ");Serial.print(strHumidity);Serial.println("% --*");
+        Serial.print("*- HUMID: ");Serial.print(strHumidity);Serial.println("% -*");
         break;
       default :
         parameterValue += (char)c; // keep building a string character-by-character until a terminator is found
@@ -171,13 +182,14 @@ void nokiaPrintLine(String display_this_message)
 //Will truncate anything passed to it that's more than NOKIA_SCREEN_MAX_CHAR_WIDTH.
 //This is a hack to support the otherwise lack of newline for the Nokia. Credit to DanK "Memes" Koris.
 {
-  Serial.print("concat input: ");Serial.println(display_this_message);
+  Serial.print("conc in:  ");Serial.println(display_this_message);
   memset(screen_line, ' ', NOKIA_SCREEN_MAX_CHAR_WIDTH);
   for (int i = 0; (i < display_this_message.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
   {
     screen_line[i] = display_this_message[i];
   }
   LCDString(screen_line);
-  Serial.print("concatoutput: ");Serial.println(screen_line);
-  Serial.print("message length is: ");Serial.println(display_this_message.length());
+  Serial.print("conc out: ");Serial.println(screen_line);
+  Serial.print("payload    length: ");Serial.println(display_this_message.length());
+  Serial.print("screenline length: ");Serial.println(sizeof(screen_line));
 }
