@@ -1,25 +1,26 @@
 
 
 
-#include "Nokia_LCD_functions.h"  //include library to drive NOKIA display
-//NOKIA 5110 is, at 5px chars, 12 characters wide
-#include <HammingEncDec.h>        // include the Hamming encoder/decoder functionality
-#include <OpticalModDemod.h>      // include the modulator/demodulator functionality
-OpticalReceiver phototransistor;  // create an instance of the receiver
-byte c;         //holds byte returned from receiver
+#include "Nokia_LCD_functions.h"    //include library to drive NOKIA display. TODO figure out how to structure this library so it doesn't need to be copied locally.
+#include <HammingEncDec.h>          // include the Hamming encoder/decoder functionality
+#include <OpticalModDemod.h>        // include the modulator/demodulator functionality
+OpticalReceiver phototransistor;    // create an instance of the receiver
+byte           c;                   //holds byte returned from receiver
 String         parameterValue;      // holds the measurand being built up character-by-character
 String         strTemperature, strHumidity; // holds the values of the measurands
 String         concatenatedTemperatureString, concatenatedHumidityString;    // holds the values of the measurands
-float          temperature_F = 0.0f;    // variable for a Fahrenheit conversion
-String         strTemperFahren;         // string for a Fahrenheit conversion
-char screen_line[12]; //array holding a line we will build, then display to the nokia screen (gives us Newline functionality)
+float          temperature_F = 0.0f;    // variable for a Fahrenheit conversion TODO
+String         strTemperFahren;     // string for a Fahrenheit conversion TODO
+
+
+char           screen_line[12];     //array holding a line we will build, then display to the nokia screen (gives us Newline functionality)
 const uint8_t  NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
-const int      LASER_TRANSMIT_SPEED = 2000;
-const uint8_t  PIN_PHOTOTRANSISTOR = 2;
+const int      LASER_TRANSMIT_SPEED = 2000; //Don't edit this unless you really know what you're doing. Keeps TX and RX in phase.
+const uint8_t  PIN_PHOTOTRANSISTOR = 2; //Pin on the Arduino for the phototransistor (receiver 'eye')
 
 int            link_timeout = 1250; // if no valid characters received in this time period, assume the link is bad
 unsigned long  time_since_last_character_received = 0; //helps decide when to message about a bad link
-unsigned long  time_now = 0; //also helps to decide about bad link
+unsigned long  time_now = 0;        //also helps to decide about bad link
 bool           is_the_link_good = true; //boolean for the same bad link decision
 const long int ANTISPAM_COUNTER_MAX = 16000;
 int            antispam_counter = 0;
@@ -72,8 +73,6 @@ void setup()
 
   LCDInit(); //Start the LCD
   /* Cosmetic frivolity on power-up. */
-  LCDString("Initializing display.");
-  delay(750);
   LCDClear();
   LCDBitmap(nasa_worm_BMP);
   delay(2750);
@@ -106,26 +105,18 @@ void loop()
         //LCDClear();
         concatenatedTemperatureString = String("T: ") + strTemperature + String("C");
         nokiaPrintLine(concatenatedTemperatureString);
-
-        memset(screen_line, ' ', NOKIA_SCREEN_MAX_CHAR_WIDTH); //As part of our manual NewLine hack, build a blank 12-char array of spaces
         concatenatedHumidityString = String("Hmd: ") + strHumidity + String("%");
-        for (int i = 0; (i < concatenatedHumidityString.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
-        {
-          screen_line[i] = concatenatedHumidityString[i];
-        }
-        LCDString(screen_line);
+        nokiaPrintLine(concatenatedHumidityString);
         break;
       case 84:         // ASCII T termination character for temperature, use string built to this point for temp
         strTemperature = parameterValue;
         parameterValue = "";
-        Serial.println("**********");
-        Serial.println(strTemperature);
+        Serial.print("*== TEMP:  ");Serial.print(strTemperature);Serial.println(" C ==*");
         break;
       case 72:        // ASCII H termination character for humidity, use string built to this point for humidity
         strHumidity = parameterValue;
         parameterValue = "";
-        Serial.println("===========");
-        Serial.println(strHumidity);
+        Serial.print("*-- HUMID: ");Serial.print(strHumidity);Serial.println("% --*");
         break;
       default :
         parameterValue += (char)c; // keep building a string character-by-character until a terminator is found
@@ -143,7 +134,7 @@ void loop()
         switch (ellipsis_iterator)
         {
           case 0:
-            nokiaPrintLine("No laser  ");
+            nokiaPrintLine("No laser");
             break;
           case 1:
             nokiaPrintLine("No laser. ");
@@ -180,10 +171,13 @@ void nokiaPrintLine(String display_this_message)
 //Will truncate anything passed to it that's more than NOKIA_SCREEN_MAX_CHAR_WIDTH.
 //This is a hack to support the otherwise lack of newline for the Nokia. Credit to DanK "Memes" Koris.
 {
+  Serial.print("concat input: ");Serial.println(display_this_message);
   memset(screen_line, ' ', NOKIA_SCREEN_MAX_CHAR_WIDTH);
   for (int i = 0; (i < display_this_message.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
   {
     screen_line[i] = display_this_message[i];
   }
   LCDString(screen_line);
+  Serial.print("concatoutput: ");Serial.println(screen_line);
+  Serial.print("message length is: ");Serial.println(display_this_message.length());
 }
