@@ -53,7 +53,7 @@ void loop()
     strTemperature=String(temperature)+="T";
     laserTransmit(strTemperature);
     delay(delaytime);
-     
+    
     strHumidity=String(humidity)+="H";
     laserTransmit(strHumidity);
     delay(delaytime);

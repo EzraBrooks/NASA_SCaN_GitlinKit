@@ -34,9 +34,8 @@ ISR(TIMER2_COMPA_vect)
 
 void loop() 
 {
-  phototransistor.GetByte(c);     // get a character from the laser receiver if one is available
-  
-  if (c>0)
+  bool received = phototransistor.GetByte(c);     // get a character from the laser receiver if one is available
+  if (received)
   {
    // if a character is ready, look at it
    Serial.println(c);
@@ -47,11 +46,7 @@ void loop()
         strTemperature=parameterValue;
         parameterValue="";
         Serial.println(strTemperature);
-        break;
-      case 80:        // ASCII P termination character for pressure, use string built to this point for pressure
-        strPressure=parameterValue;
-        parameterValue="";
-        break;    
+        break; 
       case 72:        // ASCII H termination character for humidity, use string built to this point for humidity
         strHumidity=parameterValue;
         parameterValue="";
@@ -59,6 +54,7 @@ void loop()
         break;
       default :
         parameterValue=parameterValue+=(char)c;  // keep building a string character-by-character until a terminator is found
+        break;
     }
-  } //end IFCHECK-ELSE (link is bad)
+  } 
 } // end main loop
