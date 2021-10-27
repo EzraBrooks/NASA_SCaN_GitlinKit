@@ -4,6 +4,7 @@
 #include "Nokia_LCD_functions.h"    //include library to drive NOKIA display. TODO figure out how to structure this library so it doesn't need to be copied locally.
 #include <HammingEncDec.h>          // include the Hamming encoder/decoder functionality
 #include <OpticalModDemod.h>        // include the modulator/demodulator functionality
+#include <string.h>
 OpticalReceiver phototransistor;    // create an instance of the receiver
 byte           c;                   //holds byte returned from receiver
 String         parameterValue;      // holds the measurand being built up character-by-character
@@ -11,11 +12,7 @@ String         strTemperature, strHumidity; // holds the values of the measurand
 String         concatenatedTemperatureString, concatenatedHumidityString;    // holds the values of the measurands
 float          temperature_F = 0.0f;    // variable for a Fahrenheit conversion TODO
 String         strTemperFahren;     // string for a Fahrenheit conversion TODO
-
-
-
 const uint8_t  NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
-char           screen_line[NOKIA_SCREEN_MAX_CHAR_WIDTH];     //array holding a line we will build, then display to the nokia screen (gives us Newline functionality)
 const int      LASER_TRANSMIT_SPEED = 2000; //Don't edit this unless you really know what you're doing. Keeps TX and RX in phase.
 const uint8_t  PIN_PHOTOTRANSISTOR = 2; //Pin on the Arduino for the phototransistor (receiver 'eye')
 
@@ -114,10 +111,36 @@ void loop()
         //This means a full packet is complete, so now we can push a screen update. Do this sparingly, as it can slow down the program
         //and goober the data stream; things have relatively tight processor tolerances right now.
         //LCDClear();
-        concatenatedTemperatureString = String("T: ") + strTemperature + String(" C");
-        nokiaPrintLine(concatenatedTemperatureString);
-        concatenatedHumidityString = String("Hmd: ") + strHumidity + String("%   ");
-        nokiaPrintLine(concatenatedHumidityString);
+        
+        //Builds an array of a full line (12 blank chars by default), then overwrites our intended string char by char until it's done or full, then displays.
+        //Will truncate anything passed to it that's more than NOKIA_SCREEN_MAX_CHAR_WIDTH.
+        //This is a hack to support the otherwise lack of newline for the Nokia. Credit to DanK "Memes" Koris.
+        // Tried to make this into a function but it was picking up random chunks of garbage so... we're back here.
+
+        char screen_line[NOKIA_SCREEN_MAX_CHAR_WIDTH]; //array holding line we will display to the nokia screen
+        //---------------------------------------------------
+        for (int i = 0; (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
+        {
+          screen_line[i] = ' ';
+        }
+        Serial.println(screen_line);
+        concatenatedTemperatureString = String("T: ") + strTemperature + String("     C");
+        Serial.print("temp string length is ");Serial.println(concatenatedTemperatureString.length());
+        for (int i = 0; (i < concatenatedTemperatureString.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
+        {
+          screen_line[i] = concatenatedTemperatureString[i];
+        }
+        Serial.println(screen_line);
+        LCDString(screen_line);
+        //---------------------------------------------------
+        memset(screen_line, ' ',NOKIA_SCREEN_MAX_CHAR_WIDTH); 
+        concatenatedHumidityString = String("Hmd: ") + strHumidity + String("%");
+        for (int i = 0; (i < concatenatedHumidityString.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
+        {
+          screen_line[i] = concatenatedHumidityString[i];
+        }
+        LCDString(screen_line);
+        //---------------------------------------------------
         break;
       case 84:         // ASCII T termination character for temperature, use string built to this point for temp
         strTemperature = parameterValue;
@@ -145,20 +168,20 @@ void loop()
         switch (ellipsis_iterator)
         {
           case 0:
-            nokiaPrintLine("No laser");
+            LCDString("No laser    ");
             break;
           case 1:
-            nokiaPrintLine("No laser. ");
+            LCDString("No laser.   ");
             break;
           case 2:
-            nokiaPrintLine("No laser..  ");
+            LCDString("No laser..  ");
             break;
           case 3:
-            nokiaPrintLine("No laser...");
+            LCDString("No laser... ");
             delay(25);
             break;
           case 4:
-            nokiaPrintLine("No laser...");
+            LCDString("No laser....");
             delay(25);
             LCDClear();  
             break;        
@@ -176,20 +199,3 @@ void loop()
     }
   }
 } // end main loop
-
-void nokiaPrintLine(String display_this_message)
-//Builds an array of a full line (12 blank chars by default), then overwrites our intended string char by char until it's done or full, then displays.
-//Will truncate anything passed to it that's more than NOKIA_SCREEN_MAX_CHAR_WIDTH.
-//This is a hack to support the otherwise lack of newline for the Nokia. Credit to DanK "Memes" Koris.
-{
-  Serial.print("conc in:  ");Serial.println(display_this_message);
-  memset(screen_line, ' ', NOKIA_SCREEN_MAX_CHAR_WIDTH);
-  for (int i = 0; (i < display_this_message.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
-  {
-    screen_line[i] = display_this_message[i];
-  }
-  LCDString(screen_line);
-  Serial.print("conc out: ");Serial.println(screen_line);
-  Serial.print("payload    length: ");Serial.println(display_this_message.length());
-  Serial.print("screenline length: ");Serial.println(sizeof(screen_line));
-}
