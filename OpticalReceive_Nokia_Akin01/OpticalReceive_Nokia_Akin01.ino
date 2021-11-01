@@ -3,14 +3,22 @@
 #include <HammingEncDec.h>        // include the Hamming encoder/decoder functionality
 #include <OpticalModDemod.h>      // include the modulator/demodulator functionality
 OpticalReceiver phototransistor;  // create an instance of the receiver
+
 byte c;         //holds byte returned from receiver
 String         parameterValue;      // holds the measurand being built up character-by-character
 String         strTemperature, strHumidity; // holds the values of the measurands
-String         concatenatedTemperatureString, concatenatedHumidityString;    // holds the values of the measurands
 float          temperature_F = 0.0f;    // variable for a Fahrenheit conversion
 String         strTemperFahren;         // string for a Fahrenheit conversion
 const uint8_t  NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
 const uint8_t  PIN_PHOTOTRANSISTOR = 2;
+
+int            link_timeout = 1250; // if no valid characters received in this time period, assume the link is bad
+unsigned long  time_since_last_character_received = 0; //helps decide when to message about a bad link
+unsigned long  time_now = 0; //also helps to decide about bad link
+bool           is_the_link_good = true; //boolean for the same bad link decision
+const long int ANTISPAM_COUNTER_MAX = 1600;
+int            antispam_counter = 0;
+uint8_t        ellipsis_iterator = 0; //iterator to animate a ".  " ".. " "..."
 
 const unsigned char nasa_worm_BMP [] = {
 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x20, 0x20, 0x70, 0x20, 0x20, 0x00, 0x00,
@@ -56,7 +64,7 @@ void setup()
   phototransistor.set_rxpin(PIN_PHOTOTRANSISTOR);       // pin the phototransistor is connected to
   phototransistor.set_inverted(true);                       // if receive signal is inverted (Laser on = logic 0) set this to true
   phototransistor.begin();                                  // initialize the receiver
-
+  
   LCDInit(); //Start the LCD
   /* Cosmetic frivolity on power-up. */
   LCDClear();
@@ -80,27 +88,46 @@ void loop()
   if (received)
   {
    // if a character is ready, look at it
-   Serial.println(c);
+   //Serial.println(c);
+   time_since_last_character_received = millis(); //pulls the time elapsed from the Arduino startup in and stores it
    switch (c)
     {       
       // if the character is a terminator, store what was built in a variable and display it
       case 0:
-        char screen_line[NOKIA_SCREEN_MAX_CHAR_WIDTH]; //array holding line we will display to the nokia screen
-        memset(screen_line, ' ',NOKIA_SCREEN_MAX_CHAR_WIDTH); //As part of our manual NewLine hack, build a blank 12-char array of spaces
-        concatenatedTemperatureString = String("Tmp: ") + strTemperature + String(" C");
-        for (int i = 0; (i < concatenatedTemperatureString.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
+      //Hacking in functionality using LCDCharacter rather than LCDString; it's clunkier but I don't trust LCDString after the last wrestling match I had.
+      //This is a kludgy loop to manually /newline align the output.
+        for (int i = 0; (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
         {
-          screen_line[i] = concatenatedTemperatureString[i];
+          if (i == 0){LCDCharacter('T');}
+          if (i == 1){LCDCharacter(':');}
+          if (i >= 2)
+          {
+            if (i < (strTemperature.length() + 2)) 
+            {
+              LCDCharacter(strTemperature[i - 2]);
+            }
+            else
+            {
+              LCDCharacter(' ');
+            }
+          }
         }
-        LCDString(screen_line);
-        
-        memset(screen_line, ' ',NOKIA_SCREEN_MAX_CHAR_WIDTH); //As part of our manual NewLine hack, build a blank 12-char array of spaces
-        concatenatedHumidityString = String("Hmd: ") + strHumidity + String("%");
-        for (int i = 0; (i < concatenatedHumidityString.length()) && (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
+        for (int i = 0; (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
         {
-          screen_line[i] = concatenatedHumidityString[i];
+          if (i == 0){LCDCharacter('H');}
+          if (i == 1){LCDCharacter(':');}
+          if (i >= 2)
+          {
+            if (i < strTemperature.length() + 2) 
+            {
+              LCDCharacter(strHumidity[i - 2]);
+            }
+            else
+            {
+              LCDCharacter(' ');
+            }
+          }
         }
-        LCDString(screen_line);
         break;       
       case 84:         // ASCII T termination character for temperature, use string built to this point for temp
         strTemperature=parameterValue;
@@ -115,6 +142,42 @@ void loop()
       default :
         parameterValue+=(char)c;  // keep building a string character-by-character until a terminator is found
         break;
+    }
+  }
+  else
+  {
+    is_the_link_good = (millis() <= (time_since_last_character_received + link_timeout)); //Check if we're within the timeout parameter
+    if (!(is_the_link_good))
+    {
+      if (antispam_counter >= ANTISPAM_COUNTER_MAX)
+      {
+        Serial.print(antispam_counter); Serial.print("\t"); Serial.println("Waiting for laser.");
+        switch (ellipsis_iterator)
+        {
+          case 0:
+            LCDClear();
+            LCDString("No laser    ");
+            break;
+          case 1:
+            LCDString("No laser.   ");
+            break;
+          case 2:
+            LCDString("No laser..  ");
+            break;
+          case 3:
+            LCDString("No laser... ");
+            break;
+          default:
+            ellipsis_iterator = 0;
+            break;
+        }
+        ellipsis_iterator++;
+        antispam_counter = 0;
+      }
+      else
+      {
+        antispam_counter++;
+      }
     }
   }
 } // end main loop
