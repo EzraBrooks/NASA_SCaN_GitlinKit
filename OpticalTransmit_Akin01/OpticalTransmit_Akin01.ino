@@ -9,14 +9,14 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320(); // create an I2C instance to talk to
 
 OpticalTransmitter laser;     // create an instance of the transmitter
 
-unsigned long delaytime = 500;  // delay between transmitting measurands in milliseconds (nominally 500ms)
-                              // need a 'long' value due to it being compared to the Arduino millis value
-const int CHAR_DELAY    = 30;   // delay between individual characters of a message (nominally 30ms)
-float temperatureC, temperatureF, humidity = 0; 
-String strTemperatureC, strTemperatureF, strHumidity; // String values for the measurands
-char incomingByte;            // variable to hold the byte to be encoded
-uint16_t msg;                 // varible to hold the message (character)
-int i;                        
+unsigned long       delaytime     = 500;  // delay between transmitting measurands in milliseconds (nominally 500ms)
+                                          // need a 'long' value due to it being compared to the Arduino millis value
+const int           CHAR_DELAY    = 30;   // delay between individual characters of a message (nominally 30ms)
+float               temperatureC, temperatureF, humidity = 0;      // Float values for the measurands
+String              strTemperatureC, strTemperatureF, strHumidity; // String values for the measurands
+char                incomingByte;                                  // variable to hold the byte to be encoded
+uint16_t            msg;                                           // variable to hold the message (character)
+const uint8_t       PIN_LASER_XMIT = 13;                           //Pin for the laser transmitter                 
 
 void setup() 
 {
@@ -24,7 +24,7 @@ void setup()
   Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on TRANSMITTER.");
   am2320.begin();
   laser.set_speed(2000);      // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't change this!
-  laser.set_txpin(13);        // pin the laser is connected to
+  laser.set_txpin(PIN_LASER_XMIT);        // pin the laser is connected to
   laser.begin();              // initialize the laser
 
 } // END of setup();
@@ -61,7 +61,7 @@ void loop()
 
 void  laserTransmit(String xmitmsg)
 {
-   for (i=0; i<(xmitmsg.length()+1); i++)   // transmit the string byte by byte
+   for (int i=0; i<(xmitmsg.length()+1); i++)   // transmit the string byte by byte
    {
       incomingByte=xmitmsg.charAt(i);       // get the character at position i
       //Serial.print(incomingByte);

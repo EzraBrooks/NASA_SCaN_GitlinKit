@@ -1,14 +1,14 @@
 /*TODO:
  * - screen not registering - error message Serial
  * - what happens if ptransistor is wired backwards
- * - F conversion
- * - [not for launch] more intelligent garbage checking on input; discard and/or replace bad character that are not 0-9, ., or the terminators
+  * - [not for launch] more intelligent garbage checking on input; discard and/or replace bad character that are not 0-9, ., or the terminators
  * - re-add text header and comments
- * - drop hundredths place on TX side
+ * - [not for launch] drop hundredths place on TX side
+ * - library header file
  */
 
 
-#include "Nokia_LCD_functions.h"  //include library to drive NOKIA display
+#include <Nokia_LCD_Functions.h>  //include library to drive NOKIA display
 //N.B. NOKIA 5110 is 5px chars, with 1 pixel padded on either side, for 7 pixels/char * 12 characters for 84 px
 #include <HammingEncDec.h>        // include the Hamming encoder/decoder functionality
 #include <OpticalModDemod.h>      // include the modulator/demodulator functionality
@@ -24,7 +24,7 @@ unsigned long  time_since_last_character_received = 0; //helps decide when to me
 unsigned long  time_now = 0; //also helps to decide about bad link
 bool           is_the_link_good = true; //boolean for the same bad link decision
 const long int ANTISPAM_COUNTER_MAX = 3000;
-int            antispam_counter = 0;
+int            antispam_counter = 0; //An attempt to slow down the spamming of the screen/serial while there isn't a good link. I don't think it's working...
 uint8_t        ellipsis_iterator = 0; //iterator to animate a ".  " ".. " "..."
 
 const unsigned char nasa_worm_BMP [] = {
@@ -132,6 +132,7 @@ void loop()
               LCDCharacter(' ');
             }
           }
+        //END OF THE CENTIGRADE BLOCK
         }
         //THEN, DO THIS FOR FAHRENHEIT
         for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
@@ -159,6 +160,7 @@ void loop()
               LCDCharacter(' ');
             }
           }
+        //END OF THE FAHRENHEIT BLOCK
         }
         //FINALLY, DO THIS FOR THE HUMIDITY
         for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
@@ -186,6 +188,7 @@ void loop()
               LCDCharacter(' ');
             }
           }
+        //END OF THE HUMIDITY BLOCK
         }
         break;       
       case 70:         // ASCII F termination character for temperature Fahrenheit, use string built to this point for temp
