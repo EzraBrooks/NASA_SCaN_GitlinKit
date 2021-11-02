@@ -2,8 +2,6 @@
 #include <Adafruit_Sensor.h>  // generic sensor library 
 #include <Adafruit_AM2320.h>  // specific sensor library
 
-/*#define BME280_ADDRESS (0x76) // Need to set the I2C address to Low = 0x76 (vs High = 0x77)
-  */
 Adafruit_AM2320 am2320 = Adafruit_AM2320(); // create an I2C instance to talk to the sensor
 
 #include <HammingEncDec.h>    // include the Hamming encoder/decoder functionality
@@ -14,9 +12,8 @@ OpticalTransmitter laser;     // create an instance of the transmitter
 unsigned long delaytime = 500;  // delay between transmitting measurands in milliseconds (nominally 500ms)
                               // need a 'long' value due to it being compared to the Arduino millis value
 const int CHAR_DELAY    = 30;   // delay between individual characters of a message (nominally 30ms)
-float temperature, humidity = 0; 
-boolean english=false;         // flag to use english units, otherwise use SI
-String strTemperature, strHumidity; // String values for the measurands
+float temperatureC, temperatureF, humidity = 0; 
+String strTemperatureC, strTemperatureF, strHumidity; // String values for the measurands
 char incomingByte;            // variable to hold the byte to be encoded
 uint16_t msg;                 // varible to hold the message (character)
 int i;                        
@@ -24,8 +21,9 @@ int i;
 void setup() 
 {
   Serial.begin(9600);
+  Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on TRANSMITTER.");
   am2320.begin();
-  laser.set_speed(2000);      // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz)
+  laser.set_speed(2000);      // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't change this!
   laser.set_txpin(13);        // pin the laser is connected to
   laser.begin();              // initialize the laser
 
@@ -41,22 +39,21 @@ ISR(TIMER2_COMPA_vect)
 
 void loop() 
 {
-    temperature = am2320.readTemperature();  // read the temperature from the sensor. [degrees C]
+    temperatureC = am2320.readTemperature();  // read the temperature from the sensor. [degrees C]
+    temperatureF = temperatureC * 1.8 + 32.0; // convert C to F
     humidity    = am2320.readHumidity();     // read the humidity. Humidity is returned in percent relative humidity
-
-    // if english units are desired, perform the conversion
-    if (english) 
-    {
-      temperature = temperature * 1.8 + 32.0; // convert C to F
-    }
  
-    strTemperature=String(temperature)+="T";
-    Serial.println(strTemperature);
-    laserTransmit(strTemperature);
+    strTemperatureC=String(temperatureC)+="T";
+    Serial.print("*= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
+    laserTransmit(strTemperatureC);
+    delay(delaytime);
+    strTemperatureF=String(temperatureF)+="F";
+    Serial.print("*~ Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ~*");
+    laserTransmit(strTemperatureF);
     delay(delaytime);
     
     strHumidity=String(humidity)+="H";
-    Serial.println(strHumidity);
+    Serial.print("*- Humd: "); Serial.print(strHumidity); Serial.println("%  -*");
     laserTransmit(strHumidity);
     delay(delaytime);
 

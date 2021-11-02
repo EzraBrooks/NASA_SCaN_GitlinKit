@@ -1,14 +1,21 @@
+/*TODO:
+ * - screen not registering - error message Serial
+ * - what happens if ptransistor is wired backwards
+ * - F conversion
+ * - [not for launch] more intelligent garbage checking on input; discard and/or replace bad character that are not 0-9, ., or the terminators
+ * - re-add text header and comments
+ * - drop hundredths place on TX side
+ */
+
+
 #include "Nokia_LCD_functions.h"  //include library to drive NOKIA display
-//NOKIA 5110 is, at 5px chars, 12 characters wide
+//N.B. NOKIA 5110 is 5px chars, with 1 pixel padded on either side, for 7 pixels/char * 12 characters for 84 px
 #include <HammingEncDec.h>        // include the Hamming encoder/decoder functionality
 #include <OpticalModDemod.h>      // include the modulator/demodulator functionality
 OpticalReceiver phototransistor;  // create an instance of the receiver
-
-byte c;         //holds byte returned from receiver
-String         parameterValue;      // holds the measurand being built up character-by-character
-String         strTemperature, strHumidity; // holds the values of the measurands
-float          temperature_F = 0.0f;    // variable for a Fahrenheit conversion
-String         strTemperFahren;         // string for a Fahrenheit conversion
+byte           c;                 //holds byte returned from receiver
+String         parameterValue;    // holds the measurand being built up character-by-character
+String         strTemperatureC, strTemperatureF, strHumidity; // holds the values of the measurands
 const uint8_t  NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
 const uint8_t  PIN_PHOTOTRANSISTOR = 2;
 
@@ -16,7 +23,7 @@ int            link_timeout = 1250; // if no valid characters received in this t
 unsigned long  time_since_last_character_received = 0; //helps decide when to message about a bad link
 unsigned long  time_now = 0; //also helps to decide about bad link
 bool           is_the_link_good = true; //boolean for the same bad link decision
-const long int ANTISPAM_COUNTER_MAX = 1600;
+const long int ANTISPAM_COUNTER_MAX = 3000;
 int            antispam_counter = 0;
 uint8_t        ellipsis_iterator = 0; //iterator to animate a ".  " ".. " "..."
 
@@ -58,12 +65,12 @@ const unsigned char nasa_worm_BMP [] = {
 
 void setup() 
 {
-  Serial.begin(9600);                 // start the serial port on the Arduino
-  Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on.");
-  phototransistor.set_speed(2000);             // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz)
-  phototransistor.set_rxpin(PIN_PHOTOTRANSISTOR);       // pin the phototransistor is connected to
-  phototransistor.set_inverted(true);                       // if receive signal is inverted (Laser on = logic 0) set this to true
-  phototransistor.begin();                                  // initialize the receiver
+  Serial.begin(9600);                              // start the serial port on the Arduino
+  Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on RECEIVER.");
+  phototransistor.set_speed(2000);                 // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't mess with this unless you know what you're doing!
+  phototransistor.set_rxpin(PIN_PHOTOTRANSISTOR);  // pin the phototransistor is connected to
+  phototransistor.set_inverted(true);              // if receive signal is inverted (Laser on = logic 0) set this to true
+  phototransistor.begin();                         // initialize the receiver
   
   LCDInit(); //Start the LCD
   /* Cosmetic frivolity on power-up. */
@@ -96,15 +103,29 @@ void loop()
       case 0:
       //Hacking in functionality using LCDCharacter rather than LCDString; it's clunkier but I don't trust LCDString after the last wrestling match I had.
       //This is a kludgy loop to manually /newline align the output.
-        for (int i = 0; (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
+      //Manually write the 'label' at the front of each line: "T:"
+      //Then output the data payload.
+      //Then tack on the unit at the end.
+      //FIRST, DO THIS FOR CENTIGRADE
+        for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
         {
-          if (i == 0){LCDCharacter('T');}
-          if (i == 1){LCDCharacter(':');}
-          if (i >= 2)
+          if (i == 0)
           {
-            if (i < (strTemperature.length() + 2)) 
+            LCDCharacter('T');
+          }
+          else if (i == 1)
+          { 
+            LCDCharacter(':');
+          }
+          else if (i == (strTemperatureC.length() + 3))
+          {
+            LCDCharacter('C');
+          }
+          else 
+          {
+            if (i < (strTemperatureC.length() + 2)) 
             {
-              LCDCharacter(strTemperature[i - 2]);
+              LCDCharacter(strTemperatureC[i - 2]);
             }
             else
             {
@@ -112,13 +133,51 @@ void loop()
             }
           }
         }
-        for (int i = 0; (i < NOKIA_SCREEN_MAX_CHAR_WIDTH); i++)
+        //THEN, DO THIS FOR FAHRENHEIT
+        for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
         {
-          if (i == 0){LCDCharacter('H');}
-          if (i == 1){LCDCharacter(':');}
-          if (i >= 2)
+          if (i == 0)
           {
-            if (i < strTemperature.length() + 2) 
+            LCDCharacter('T');
+          }
+          else if (i == 1)
+          { 
+            LCDCharacter(':');
+          }
+          else if (i == (strTemperatureF.length() + 3))
+          {
+            LCDCharacter('F');
+          }
+          else 
+          {
+            if (i < (strTemperatureF.length() + 2)) 
+            {
+              LCDCharacter(strTemperatureF[i - 2]);
+            }
+            else
+            {
+              LCDCharacter(' ');
+            }
+          }
+        }
+        //FINALLY, DO THIS FOR THE HUMIDITY
+        for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
+        {
+          if (i == 0)
+          {
+            LCDCharacter('H');
+          }
+          else if (i == 1)
+          {
+            LCDCharacter(':');
+          }
+          else if (i == (strHumidity.length() + 2))
+          {
+            LCDCharacter('%');
+          }
+          else
+          {
+            if (i < (strHumidity.length() + 2))
             {
               LCDCharacter(strHumidity[i - 2]);
             }
@@ -129,10 +188,15 @@ void loop()
           }
         }
         break;       
-      case 84:         // ASCII T termination character for temperature, use string built to this point for temp
-        strTemperature=parameterValue;
+      case 70:         // ASCII F termination character for temperature Fahrenheit, use string built to this point for temp
+        strTemperatureF=parameterValue;
         parameterValue="";
-        Serial.print("*= Temp: "); Serial.print(strTemperature); Serial.println(" C =*");
+        Serial.print("*~ Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ~*");
+        break; 
+      case 84:         // ASCII T termination character for temperature Centigrade, use string built to this point for temp
+        strTemperatureC=parameterValue;
+        parameterValue="";
+        Serial.print("*= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
         break; 
       case 72:        // ASCII H termination character for humidity, use string built to this point for humidity
         strHumidity=parameterValue;
@@ -146,6 +210,8 @@ void loop()
   }
   else
   {
+    // If we haven't received anything in a while (default: 1250 ms), we presume the laser link has been broken.
+    // Let's do some fancy output to complain about the lost laser link in a visually interesting way.
     is_the_link_good = (millis() <= (time_since_last_character_received + link_timeout)); //Check if we're within the timeout parameter
     if (!(is_the_link_good))
     {
