@@ -28,13 +28,13 @@ void setup()
   laser.begin();              // initialize the laser
   am2320.begin();
   temperatureC = am2320.readTemperature();
+  //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
   if (temperatureC == temperatureC)
   {  
     Serial.print("AM2320 sensor has been set up properly! Initial measurement is temperature: "); Serial.print(am2320.readTemperature()); Serial.println(" C.");
   }
   else
   {
-    //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
     Serial.println("Not reading the AM2320 sensor; check the wiring and assembly instructions carefully.");
   }
 } // END of setup();
@@ -51,13 +51,14 @@ void loop()
 {
     temperatureC = am2320.readTemperature();  // read the temperature from the sensor. [degrees C]
     temperatureF = temperatureC * 1.8 + 32.0; // convert C to F
-    humidity    = am2320.readHumidity();     // read the humidity. Humidity is returned in percent relative humidity
+    humidity     = am2320.readHumidity();     // read the humidity. Humidity is returned in percent relative humidity
 
+   //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
    if (!(temperatureC == temperatureC))
    {  
-    //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
-    Serial.println("Not reading the AM2320 sensor; check the wiring and assembly instructions carefully.");
+     Serial.println("Not reading the AM2320 sensor; check the wiring and assembly instructions carefully.");
    }
+   
     strTemperatureC=String(temperatureC)+="T";
     Serial.print("*= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
     laserTransmit(strTemperatureC);
