@@ -17,16 +17,26 @@ String              strTemperatureC, strTemperatureF, strHumidity; // String val
 char                incomingByte;                                  // variable to hold the byte to be encoded
 uint16_t            msg;                                           // variable to hold the message (character)
 const uint8_t       PIN_LASER_XMIT = 13;                           //Pin for the laser transmitter                 
+bool                sensor_good = false;  //Variable to check if the AAM2320 sensor is reading properly.
 
 void setup() 
 {
   Serial.begin(9600);
   Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on TRANSMITTER.");
-  am2320.begin();
   laser.set_speed(2000);      // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't change this!
   laser.set_txpin(PIN_LASER_XMIT);        // pin the laser is connected to
   laser.begin();              // initialize the laser
-
+  am2320.begin();
+  temperatureC = am2320.readTemperature();
+  if (temperatureC == temperatureC)
+  {  
+    Serial.print("AM2320 sensor has been set up properly! Initial measurement is temperature: "); Serial.print(am2320.readTemperature()); Serial.println(" C.");
+  }
+  else
+  {
+    //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
+    Serial.println("Not reading the AM2320 sensor; check the wiring and assembly instructions carefully.");
+  }
 } // END of setup();
 
 /* Set up an Interrupt Service Routine to transmit characters.
@@ -42,7 +52,12 @@ void loop()
     temperatureC = am2320.readTemperature();  // read the temperature from the sensor. [degrees C]
     temperatureF = temperatureC * 1.8 + 32.0; // convert C to F
     humidity    = am2320.readHumidity();     // read the humidity. Humidity is returned in percent relative humidity
- 
+
+   if (!(temperatureC == temperatureC))
+   {  
+    //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
+    Serial.println("Not reading the AM2320 sensor; check the wiring and assembly instructions carefully.");
+   }
     strTemperatureC=String(temperatureC)+="T";
     Serial.print("*= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
     laserTransmit(strTemperatureC);
@@ -53,7 +68,7 @@ void loop()
     delay(delaytime);
     
     strHumidity=String(humidity)+="H";
-    Serial.print("*- Humd: "); Serial.print(strHumidity); Serial.println("%  -*");
+    Serial.print("*- Hum:  "); Serial.print(strHumidity); Serial.println("%  -*");
     laserTransmit(strHumidity);
     delay(delaytime);
 
