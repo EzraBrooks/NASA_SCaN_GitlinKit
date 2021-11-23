@@ -1,3 +1,29 @@
+/***************************************************************************
+  Laser Transmitter Code
+  
+  This program uses an Adafruit AM2320 humidity & temperature sensor to 
+  communicate to an Arduino over I2C. The Arduino then packetizes the data
+  and sends it to a second Arduino via laser link, through a KY-008 laser
+  module.
+
+  This is intended to pair with the [thus far] unofficial NASA Space Communications
+  and Navigation "GitlinKit" instruction packet. Inquire at 
+  GSFC-SCaN-ENGAGEMENT@MAIL.NASA.GOV for a copy of these instructions.
+  
+  The sensor is connected to SCL -> SCL, SCA -> SCA, VCC -> 5V, GND -> GND
+
+  Hamming encoder/decoder and Optical modulator/demodulator are based on
+  the LumenWire library written by Andrew Ramanjooloo and modified by
+  Tom Gitlin.
+  https://github.com/HobbyTransform/Encoded-Laser-and-LED-Serial-Communication
+  Original Arduino sketch, prototyping, and concept by Tom Gitlin.
+  Modifications to refactor the code, use the Nokia 5110 display, and a 'no
+  solder' version by Jimmy Acevedo and Julie Hoover. 
+  
+  Thanks to Dan Koris and Ezra Brooks for QA and debugging.
+  
+***************************************************************************/
+
 #include <Wire.h>             // library to communicate with the sensor using I2C
 #include <Adafruit_Sensor.h>  // generic sensor library 
 #include <Adafruit_AM2320.h>  // specific sensor library

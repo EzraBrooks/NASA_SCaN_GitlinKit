@@ -1,9 +1,38 @@
-/*TODO:
-  * - what happens if ptransistor is wired backwards
-  * - [not for launch] more intelligent garbage checking on input; discard and/or replace bad character that are not 0-9, ., or the terminators
- * - re-add text header and comments
- * - [not for launch] drop hundredths place on TX side
- */
+/***************************************************************************
+  Laser Receiver Code
+  
+  This program uses a QRD-1114 phototransistor to receive data via a laser link
+  from a second Arduino. It decodes the data stream and displays it via Serial
+  Monitor and an onboard Nokia 5110 display screen.
+
+  This is intended to pair with the [thus far] unofficial NASA Space Communications
+  and Navigation "GitlinKit" instruction packet. Inquire at 
+  GSFC-SCaN-ENGAGEMENT@MAIL.NASA.GOV for a copy of these instructions.
+  
+  Nokia 5110 pins:      Arduino pins:
+  1                     3.3V
+  2                     GND
+  3                     7, via 1k R
+  4                     6, via 10k R
+  5                     5, via 10k R
+  6                     11, via 10k R
+  7                     13, via 10k R
+  8                     (optional) 2.4-5V via 330 R
+
+  *** IMPORTANT: The Delay function is used sparingly because it stalls program execution
+  (except for interrupts) and can affect the ability to check if characters are ready. ***
+
+  Hamming encoder/decoder and Optical modulator/demodulator are based on
+  the LumenWire library written by Andrew Ramanjooloo and modified by
+  Tom Gitlin.
+  https://github.com/HobbyTransform/Encoded-Laser-and-LED-Serial-Communication
+  Original Arduino sketch, prototyping, and concept by Tom Gitlin.
+  Modifications to refactor the code, use the Nokia 5110 display, and a 'no
+  solder' version by Jimmy Acevedo and Julie Hoover. 
+  
+  Thanks to Dan Koris and Ezra Brooks for QA and debugging.
+  
+***************************************************************************/
 
 
 #include <Nokia_LCD_Functions.h>  //include library to drive NOKIA display
@@ -25,6 +54,7 @@ const long int ANTISPAM_COUNTER_MAX = 3000;
 int            antispam_counter = 0; //An attempt to slow down the spamming of the screen/serial while there isn't a good link. I don't think it's working...
 uint8_t        ellipsis_iterator = 0; //iterator to animate a ".  " ".. " "..."
 
+//This is a cosmetic bitmap image to display on startup.
 const unsigned char nasa_worm_BMP [] = {
 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x20, 0x20, 0x70, 0x20, 0x20, 0x00, 0x00,
 0x02, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0xF0, 0xF8, 0xFC, 0xFE, 0xFE, 0xFE, 0x7E, 0x3C,
@@ -81,7 +111,7 @@ void setup()
 /* --------- INTERRUPT SERVICE ROUTINE (ISR) ----------
    Set up an interrupt service routine to receive characters
    Arduino Timer2 reads the LIGHT_RECEIVE_PIN at laser
-   receive speed to receive each half bit */
+   receive speed to receive each half bit. Don't mess with this! */
 ISR(TIMER2_COMPA_vect)
 {
   phototransistor.receive();   // check for a received character every timer interrupt
