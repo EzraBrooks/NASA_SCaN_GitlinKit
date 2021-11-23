@@ -1,10 +1,8 @@
 /*TODO:
- * - screen not registering - error message Serial
- * - what happens if ptransistor is wired backwards
+  * - what happens if ptransistor is wired backwards
   * - [not for launch] more intelligent garbage checking on input; discard and/or replace bad character that are not 0-9, ., or the terminators
  * - re-add text header and comments
  * - [not for launch] drop hundredths place on TX side
- * - library header file
  */
 
 
@@ -194,17 +192,17 @@ void loop()
       case 70:         // ASCII F termination character for temperature Fahrenheit, use string built to this point for temp
         strTemperatureF=parameterValue;
         parameterValue="";
-        Serial.print("*~ Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ~*");
+        Serial.print("[RX] *~ Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ~*");
         break; 
       case 84:         // ASCII T termination character for temperature Centigrade, use string built to this point for temp
         strTemperatureC=parameterValue;
         parameterValue="";
-        Serial.print("*= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
+        Serial.print("[RX] *= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
         break; 
       case 72:        // ASCII H termination character for humidity, use string built to this point for humidity
         strHumidity=parameterValue;
         parameterValue="";
-        Serial.print("*- Humd: "); Serial.print(strHumidity); Serial.println("%  -*");
+        Serial.print("[RX] *- Hum:  "); Serial.print(strHumidity); Serial.println("%  -*");
         break;
       default :
         parameterValue+=(char)c;  // keep building a string character-by-character until a terminator is found

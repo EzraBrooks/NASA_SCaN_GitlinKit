@@ -60,16 +60,16 @@ void loop()
   }
 
   strTemperatureC = String(temperatureC) += "T";
-  Serial.print("*= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
+  Serial.print("[TX] Temp: "); Serial.print(strTemperatureC); Serial.println(" °C");
   laserTransmit(strTemperatureC);
   delay(delaytime);
   strTemperatureF = String(temperatureF) += "F";
-  Serial.print("*~ Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ~*");
+  Serial.print("[TX] Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ");
   laserTransmit(strTemperatureF);
   delay(delaytime);
 
   strHumidity = String(humidity) += "H";
-  Serial.print("*- Hum:  "); Serial.print(strHumidity); Serial.println("%  -*");
+  Serial.print("[TX] Hum:  "); Serial.print(strHumidity); Serial.println("% ");
   laserTransmit(strHumidity);
   delay(delaytime);
 
