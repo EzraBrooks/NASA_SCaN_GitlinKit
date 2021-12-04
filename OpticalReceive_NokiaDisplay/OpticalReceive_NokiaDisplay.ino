@@ -53,6 +53,10 @@ bool           is_the_link_good = true; //boolean for the same bad link decision
 const long int ANTISPAM_COUNTER_MAX = 3000;
 int            antispam_counter = 0; //An attempt to slow down the spamming of the screen/serial while there isn't a good link. I don't think it's working...
 uint8_t        ellipsis_iterator = 0; //iterator to animate a ".  " ".. " "..."
+const uint8_t  PIN_RX_STATUS = 10;    //Pin for a status LED; recommend dim green (550nm)
+                                      //Default behavior: on == receiving / laser link is good
+                                      //Default behavior: off == not receiving / no good laser link
+short int      LED_sensor_status_flicker = 0;                 //Gives us a way to flicker the LED without using delay()
 
 //This is a cosmetic bitmap image to display on startup.
 const unsigned char nasa_worm_BMP [] = {
@@ -99,6 +103,8 @@ void setup()
   phototransistor.set_rxpin(PIN_PHOTOTRANSISTOR);  // pin the phototransistor is connected to
   phototransistor.set_inverted(true);              // if receive signal is inverted (Laser on = logic 0) set this to true
   phototransistor.begin();                         // initialize the receiver
+
+  pinMode(PIN_RX_STATUS, OUTPUT);
   
   LCDInit(); //Start the LCD
   /* Cosmetic frivolity on power-up. */
@@ -246,6 +252,7 @@ void loop()
     is_the_link_good = (millis() <= (time_since_last_character_received + link_timeout)); //Check if we're within the timeout parameter
     if (!(is_the_link_good))
     {
+      digitalWrite(PIN_RX_STATUS, LOW); //Turn off the status LED
       if (antispam_counter >= ANTISPAM_COUNTER_MAX)
       {
         Serial.print(antispam_counter); Serial.print("\t"); Serial.println("Waiting for laser.");
@@ -276,5 +283,32 @@ void loop()
         antispam_counter++;
       }
     }
+    else
+    {
+      digitalWrite(PIN_RX_STATUS, HIGH); //Turn on the status LED
+    }
   }
 } // end main loop
+
+void flicker_the_LED(uint8_t LED_pin)
+/* Toggles the LED on and off slowly. Designed to work around 
+ * the delay() function, which fatally disrupts the synchrony 
+ * of this particular timing-dependent system.
+ * There are probably many better ways to set up this logic!
+ * Currently not utilized.
+ */
+{
+  LED_sensor_status_flicker++;
+  if (LED_sensor_status_flicker <= 1)
+  {
+    digitalWrite(LED_pin, HIGH);
+  }
+  else
+  {
+    digitalWrite(LED_pin, LOW);
+  }
+  if ((LED_sensor_status_flicker < 0) || (LED_sensor_status_flicker > 2))
+  {
+    LED_sensor_status_flicker = 0;
+  }  
+} // END of flicker_the_LED

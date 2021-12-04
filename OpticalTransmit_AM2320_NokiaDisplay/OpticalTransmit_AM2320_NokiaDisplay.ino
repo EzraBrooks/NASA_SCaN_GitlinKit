@@ -24,6 +24,7 @@
   
 ***************************************************************************/
 
+
 #include <Wire.h>             // library to communicate with the sensor using I2C
 #include <Adafruit_Sensor.h>  // generic sensor library 
 #include <Adafruit_AM2320.h>  // specific sensor library
@@ -43,25 +44,38 @@ String              strTemperatureC, strTemperatureF, strHumidity; // String val
 char                incomingByte;                                  // variable to hold the byte to be encoded
 uint16_t            msg;                                           // variable to hold the message (character)
 const uint8_t       PIN_LASER_XMIT = 13;                           //Pin for the laser transmitter
+const uint8_t       PIN_LED_SENSOR_STATUS = 10;                    //Pin for a status LED; recommend dim green (550nm)
+                                                                   //Default behavior: solid green == sensor detected and nominal
+                                                                   //Default behavior: flashing green == sensor error
+short int           LED_sensor_status_flicker = 0;                 //Gives us a way to flicker the LED without using delay()
 bool                sensor_good = false;  //Variable to check if the AAM2320 sensor is reading properly.
 
 void setup()
 {
+  // Serial setup:
   Serial.begin(9600);
   Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on TRANSMITTER.");
+  
+  // Laser setup:
   laser.set_speed(2000);      // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't change this!
   laser.set_txpin(PIN_LASER_XMIT);        // pin the laser is connected to
   laser.begin();              // initialize the laser
+
+  // Sensor setup:
   am2320.begin();
   temperatureC = am2320.readTemperature();
-  //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
+  pinMode(PIN_LED_SENSOR_STATUS, OUTPUT);
+  /*If the AM2320 isn't set up properly, then float temperatureC 
+   * will read as NaN (not a number) and won't resolve as == itself */
   if (temperatureC == temperatureC)
   {
     Serial.print("AM2320 sensor has been set up properly! Initial measurement is temperature: "); Serial.print(am2320.readTemperature()); Serial.println(" C.");
+    digitalWrite(PIN_LED_SENSOR_STATUS, HIGH); //Turn on the status LED
   }
   else
   {
     Serial.println("Not reading the AM2320 sensor; check the wiring and assembly instructions carefully.");
+    flicker_the_LED(PIN_LED_SENSOR_STATUS);
   }
 } // END of setup();
 
@@ -83,6 +97,11 @@ void loop()
   if (!(temperatureC == temperatureC))
   {
     Serial.println("Not reading the AM2320 sensor; check the wiring and assembly instructions carefully.");
+    flicker_the_LED(PIN_LED_SENSOR_STATUS);
+  }
+  else
+  {
+    digitalWrite(PIN_LED_SENSOR_STATUS, HIGH); //Turn on the status LED
   }
 
   strTemperatureC = String(temperatureC) += "T";
@@ -112,3 +131,25 @@ void  laserTransmit(String xmitmsg)
     delay(CHAR_DELAY);                    // wait delay between transmitting individual characters of the message
   }
 } // END of laserTransmit()
+
+void flicker_the_LED(uint8_t LED_pin)
+/* Toggles the LED on and off slowly. Designed to work around 
+ * the delay() function, which fatally disrupts the synchrony 
+ * of this particular timing-dependent system.
+ * There are probably many better ways to set up this logic!
+ */
+{
+  LED_sensor_status_flicker++;
+  if (LED_sensor_status_flicker <= 1)
+  {
+    digitalWrite(LED_pin, HIGH);
+  }
+  else
+  {
+    digitalWrite(LED_pin, LOW);
+  }
+  if ((LED_sensor_status_flicker < 0) || (LED_sensor_status_flicker > 2))
+  {
+    LED_sensor_status_flicker = 0;
+  }  
+} // END of flicker_the_LED
