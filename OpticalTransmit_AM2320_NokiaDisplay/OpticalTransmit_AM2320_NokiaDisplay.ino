@@ -48,7 +48,6 @@ const uint8_t       PIN_LED_SENSOR_STATUS = 10;                    //Pin for a s
                                                                    //Default behavior: solid green == sensor detected and nominal
                                                                    //Default behavior: flashing green == sensor error
 short int           LED_sensor_status_flicker = 0;                 //Gives us a way to flicker the LED without using delay()
-bool                sensor_good = false;  //Variable to check if the AAM2320 sensor is reading properly.
 
 void setup()
 {
