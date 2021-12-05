@@ -107,7 +107,7 @@ void setup()
   LCDInit(); //Start the LCD
   /* Cosmetic frivolity on power-up. */
   LCDClear();
-  LCDBitmap(nasa_worm_BMP);
+  LCDBitmap((char*)nasa_worm_BMP);
   delay(2250);
   LCDClear();
 }
@@ -133,95 +133,9 @@ void loop()
     {
     // if the character is a terminator, store what was built in a variable and display it
     case 0:
-      //Hacking in functionality using LCDCharacter rather than LCDString; it's clunkier but I don't trust LCDString after the last wrestling match I had.
-      //This is a kludgy loop to manually /newline align the output.
-      //Manually write the 'label' at the front of each line: "T:"
-      //Then output the data payload.
-      //Then tack on the unit at the end.
-      //FIRST, DO THIS FOR CENTIGRADE
-      for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
-      {
-        if (i == 0)
-        {
-          LCDCharacter('T');
-        }
-        else if (i == 1)
-        {
-          LCDCharacter(':');
-        }
-        else if (i == (strTemperatureC.length() + 3))
-        {
-          LCDCharacter('C');
-        }
-        else
-        {
-          if (i < (strTemperatureC.length() + 2))
-          {
-            LCDCharacter(strTemperatureC[i - 2]);
-          }
-          else
-          {
-            LCDCharacter(' ');
-          }
-        }
-        //END OF THE CENTIGRADE BLOCK
-      }
-      //THEN, DO THIS FOR FAHRENHEIT
-      for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
-      {
-        if (i == 0)
-        {
-          LCDCharacter('T');
-        }
-        else if (i == 1)
-        {
-          LCDCharacter(':');
-        }
-        else if (i == (strTemperatureF.length() + 3))
-        {
-          LCDCharacter('F');
-        }
-        else
-        {
-          if (i < (strTemperatureF.length() + 2))
-          {
-            LCDCharacter(strTemperatureF[i - 2]);
-          }
-          else
-          {
-            LCDCharacter(' ');
-          }
-        }
-        //END OF THE FAHRENHEIT BLOCK
-      }
-      //FINALLY, DO THIS FOR THE HUMIDITY
-      for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
-      {
-        if (i == 0)
-        {
-          LCDCharacter('H');
-        }
-        else if (i == 1)
-        {
-          LCDCharacter(':');
-        }
-        else if (i == (strHumidity.length() + 2))
-        {
-          LCDCharacter('%');
-        }
-        else
-        {
-          if (i < (strHumidity.length() + 2))
-          {
-            LCDCharacter(strHumidity[i - 2]);
-          }
-          else
-          {
-            LCDCharacter(' ');
-          }
-        }
-        //END OF THE HUMIDITY BLOCK
-      }
+      LCDWriteLine("T: " + strTemperatureC + " C");
+      LCDWriteLine("T: " + strTemperatureF + " F");
+      LCDWriteLine("H: " + strHumidity + "%");
       break;
     case 70: // ASCII F termination character for temperature Fahrenheit, use string built to this point for temp
       strTemperatureF = parameterValue;
@@ -295,6 +209,14 @@ void loop()
     }
   }
 } // end main loop
+
+// Pad and/or shorten a string to fit exactly the width of the Nokia display, then write it
+void LCDWriteLine(String line){
+  while (line.length() < NOKIA_SCREEN_MAX_CHAR_WIDTH) {
+    line += " ";
+  }
+  LCDString((char*)line.substring(0, 12).c_str());
+}
 
 void flicker_the_LED(uint8_t LED_pin)
 /* Toggles the LED on and off slowly. Designed to work around 
