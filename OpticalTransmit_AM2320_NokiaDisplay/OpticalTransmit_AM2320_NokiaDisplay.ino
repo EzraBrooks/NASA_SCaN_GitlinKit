@@ -91,6 +91,9 @@ void loop()
 {
   temperatureC = am2320.readTemperature();  // read the temperature from the sensor. [degrees C]
   temperatureF = temperatureC * 1.8 + 32.0; // convert C to F
+  // This delay is to compensate for a sensor read issue when running on an Elegoo Uno R3.
+  // Adjusting this delay up or down if you are sometimes getting NAN from the sensor may help
+  delay(100);
   humidity = am2320.readHumidity();         // read the humidity. Humidity is returned in percent relative humidity
 
   //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
