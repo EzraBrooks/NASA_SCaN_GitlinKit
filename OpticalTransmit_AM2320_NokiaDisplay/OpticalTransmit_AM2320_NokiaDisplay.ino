@@ -24,41 +24,40 @@
   
 ***************************************************************************/
 
-
-#include <Wire.h>             // library to communicate with the sensor using I2C
-#include <Adafruit_Sensor.h>  // generic sensor library 
-#include <Adafruit_AM2320.h>  // specific sensor library
+#include <Wire.h>            // library to communicate with the sensor using I2C
+#include <Adafruit_Sensor.h> // generic sensor library
+#include <Adafruit_AM2320.h> // specific sensor library
 
 Adafruit_AM2320 am2320 = Adafruit_AM2320(); // create an I2C instance to talk to the sensor
 
-#include <HammingEncDec.h>    // include the Hamming encoder/decoder functionality
-#include <OpticalModDemod.h>  // include the modulator/demodulator functionality
+#include <HammingEncDec.h>   // include the Hamming encoder/decoder functionality
+#include <OpticalModDemod.h> // include the modulator/demodulator functionality
 
-OpticalTransmitter laser;     // create an instance of the transmitter
+OpticalTransmitter laser; // create an instance of the transmitter
 
-unsigned long       delaytime     = 500;  // delay between transmitting measurands in milliseconds (nominally 500ms)
+unsigned long delaytime = 500; // delay between transmitting measurands in milliseconds (nominally 500ms)
 // need a 'long' value due to it being compared to the Arduino millis value
-const int           CHAR_DELAY    = 30;   // delay between individual characters of a message (nominally 30ms)
-float               temperatureC, temperatureF, humidity = 0;      // Float values for the measurands
-String              strTemperatureC, strTemperatureF, strHumidity; // String values for the measurands
-char                incomingByte;                                  // variable to hold the byte to be encoded
-uint16_t            msg;                                           // variable to hold the message (character)
-const uint8_t       PIN_LASER_XMIT = 13;                           //Pin for the laser transmitter
-const uint8_t       PIN_LED_SENSOR_STATUS = 10;                    //Pin for a status LED; recommend dim green (550nm)
-                                                                   //Default behavior: solid green == sensor detected and nominal
-                                                                   //Default behavior: flashing green == sensor error
-short int           LED_sensor_status_flicker = 0;                 //Gives us a way to flicker the LED without using delay()
+const int CHAR_DELAY = 30;                            // delay between individual characters of a message (nominally 30ms)
+float temperatureC, temperatureF, humidity = 0;       // Float values for the measurands
+String strTemperatureC, strTemperatureF, strHumidity; // String values for the measurands
+char incomingByte;                                    // variable to hold the byte to be encoded
+uint16_t msg;                                         // variable to hold the message (character)
+const uint8_t PIN_LASER_XMIT = 13;                    //Pin for the laser transmitter
+const uint8_t PIN_LED_SENSOR_STATUS = 10;             //Pin for a status LED; recommend dim green (550nm)
+                                                      //Default behavior: solid green == sensor detected and nominal
+                                                      //Default behavior: flashing green == sensor error
+short int LED_sensor_status_flicker = 0;              //Gives us a way to flicker the LED without using delay()
 
 void setup()
 {
   // Serial setup:
   Serial.begin(9600);
   Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on TRANSMITTER.");
-  
+
   // Laser setup:
-  laser.set_speed(2000);      // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't change this!
-  laser.set_txpin(PIN_LASER_XMIT);        // pin the laser is connected to
-  laser.begin();              // initialize the laser
+  laser.set_speed(2000);           // laser modulation speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't change this!
+  laser.set_txpin(PIN_LASER_XMIT); // pin the laser is connected to
+  laser.begin();                   // initialize the laser
 
   // Sensor setup:
   am2320.begin();
@@ -68,7 +67,9 @@ void setup()
    * will read as NaN (not a number) and won't resolve as == itself */
   if (temperatureC == temperatureC)
   {
-    Serial.print("AM2320 sensor has been set up properly! Initial measurement is temperature: "); Serial.print(am2320.readTemperature()); Serial.println(" C.");
+    Serial.print("AM2320 sensor has been set up properly! Initial measurement is temperature: ");
+    Serial.print(am2320.readTemperature());
+    Serial.println(" C.");
     digitalWrite(PIN_LED_SENSOR_STATUS, HIGH); //Turn on the status LED
   }
   else
@@ -90,7 +91,7 @@ void loop()
 {
   temperatureC = am2320.readTemperature();  // read the temperature from the sensor. [degrees C]
   temperatureF = temperatureC * 1.8 + 32.0; // convert C to F
-  humidity     = am2320.readHumidity();     // read the humidity. Humidity is returned in percent relative humidity
+  humidity = am2320.readHumidity();         // read the humidity. Humidity is returned in percent relative humidity
 
   //If the AM2320 isn't set up properly, then float temperatureC will read as NaN (not a number) and won't resolve as == itself
   if (!(temperatureC == temperatureC))
@@ -104,30 +105,36 @@ void loop()
   }
 
   strTemperatureC = String(temperatureC) += "T";
-  Serial.print("[TX] Temp: "); Serial.print(strTemperatureC); Serial.println(" °C");
+  Serial.print("[TX] Temp: ");
+  Serial.print(strTemperatureC);
+  Serial.println(" °C");
   laserTransmit(strTemperatureC);
   delay(delaytime);
   strTemperatureF = String(temperatureF) += "F";
-  Serial.print("[TX] Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ");
+  Serial.print("[TX] Temp: ");
+  Serial.print(strTemperatureF);
+  Serial.println(" °F ");
   laserTransmit(strTemperatureF);
   delay(delaytime);
 
   strHumidity = String(humidity) += "H";
-  Serial.print("[TX] Hum:  "); Serial.print(strHumidity); Serial.println("% ");
+  Serial.print("[TX] Hum:  ");
+  Serial.print(strHumidity);
+  Serial.println("% ");
   laserTransmit(strHumidity);
   delay(delaytime);
 
 } //END of loop()
 
-void  laserTransmit(String xmitmsg)
+void laserTransmit(String xmitmsg)
 {
   for (int i = 0; i < (xmitmsg.length() + 1); i++) // transmit the string byte by byte
   {
-    incomingByte = xmitmsg.charAt(i);     // get the character at position i
+    incomingByte = xmitmsg.charAt(i); // get the character at position i
     //Serial.print(incomingByte);
     msg = hamming_byte_encoder(incomingByte); // encode the character
-    laser.manchester_modulate(msg);       // modulate the character using the laser
-    delay(CHAR_DELAY);                    // wait delay between transmitting individual characters of the message
+    laser.manchester_modulate(msg);           // modulate the character using the laser
+    delay(CHAR_DELAY);                        // wait delay between transmitting individual characters of the message
   }
 } // END of laserTransmit()
 
@@ -150,5 +157,5 @@ void flicker_the_LED(uint8_t LED_pin)
   if ((LED_sensor_status_flicker < 0) || (LED_sensor_status_flicker > 2))
   {
     LED_sensor_status_flicker = 0;
-  }  
+  }
 } // END of flicker_the_LED
