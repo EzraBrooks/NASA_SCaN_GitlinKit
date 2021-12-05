@@ -1,4 +1,4 @@
-
+.DS_Store
 libraries/Adafruit_Circuit_Playground/examples/color_sense/color_sense.ino
 libraries/Adafruit_Circuit_Playground/examples/comm_badge/coin.h
 libraries/Adafruit_Circuit_Playground/examples/comm_badge/comm_badge.ino
