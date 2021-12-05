@@ -34,29 +34,28 @@
   
 ***************************************************************************/
 
-
-#include <Nokia_LCD_Functions.h>  //include library to drive NOKIA display
 //N.B. NOKIA 5110 is 5px chars, with 1 pixel padded on either side, for 7 pixels/char * 12 characters for 84 px
-#include <HammingEncDec.h>        // include the Hamming encoder/decoder functionality
-#include <OpticalModDemod.h>      // include the modulator/demodulator functionality
-OpticalReceiver phototransistor;  // create an instance of the receiver
-byte           c;                 //holds byte returned from receiver
-String         parameterValue;    // holds the measurand being built up character-by-character
-String         strTemperatureC, strTemperatureF, strHumidity; // holds the values of the measurands
-const uint8_t  NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
-const uint8_t  PIN_PHOTOTRANSISTOR = 2;
+#include <Nokia_LCD_Functions.h>                      //include library to drive NOKIA display
+#include <HammingEncDec.h>                            // include the Hamming encoder/decoder functionality
+#include <OpticalModDemod.h>                          // include the modulator/demodulator functionality
+OpticalReceiver phototransistor;                      // create an instance of the receiver
+byte c;                                               //holds byte returned from receiver
+String parameterValue;                                // holds the measurand being built up character-by-character
+String strTemperatureC, strTemperatureF, strHumidity; // holds the values of the measurands
+const uint8_t NOKIA_SCREEN_MAX_CHAR_WIDTH = 12;
+const uint8_t PIN_PHOTOTRANSISTOR = 2;
 
-int            link_timeout = 1250; // if no valid characters received in this time period, assume the link is bad
-unsigned long  time_since_last_character_received = 0; //helps decide when to message about a bad link
-unsigned long  time_now = 0; //also helps to decide about bad link
-bool           is_the_link_good = true; //boolean for the same bad link decision
+int link_timeout = 1250;                              // if no valid characters received in this time period, assume the link is bad
+unsigned long time_since_last_character_received = 0; //helps decide when to message about a bad link
+unsigned long time_now = 0;                           //also helps to decide about bad link
+bool is_the_link_good = true;                         //boolean for the same bad link decision
 const long int ANTISPAM_COUNTER_MAX = 3000;
-int            antispam_counter = 0; //An attempt to slow down the spamming of the screen/serial while there isn't a good link. I don't think it's working...
-uint8_t        ellipsis_iterator = 0; //iterator to animate a ".  " ".. " "..."
-const uint8_t  PIN_RX_STATUS = 10;    //Pin for a status LED; recommend dim green (550nm)
-                                      //Default behavior: on == receiving / laser link is good
-                                      //Default behavior: off == not receiving / no good laser link
-short int      LED_sensor_status_flicker = 0;                 //Gives us a way to flicker the LED without using delay()
+int antispam_counter = 0;                //An attempt to slow down the spamming of the screen/serial while there isn't a good link. I don't think it's working...
+uint8_t ellipsis_iterator = 0;           //iterator to animate a ".  " ".. " "..."
+const uint8_t PIN_RX_STATUS = 10;        //Pin for a status LED; recommend dim green (550nm)
+                                         //Default behavior: on == receiving / laser link is good
+                                         //Default behavior: off == not receiving / no good laser link
+short int LED_sensor_status_flicker = 0; //Gives us a way to flicker the LED without using delay()
 
 //This is a cosmetic bitmap image to display on startup.
 const unsigned char nasa_worm_BMP [] = {
@@ -94,18 +93,17 @@ const unsigned char nasa_worm_BMP [] = {
 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 
 };
 
-
-void setup() 
+void setup()
 {
-  Serial.begin(9600);                              // start the serial port on the Arduino
+  Serial.begin(9600); // start the serial port on the Arduino
   Serial.println("NASA SCaN Gitlinkit Laser Relay demonstration -- powering on RECEIVER.");
-  phototransistor.set_speed(2000);                 // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't mess with this unless you know what you're doing!
-  phototransistor.set_rxpin(PIN_PHOTOTRANSISTOR);  // pin the phototransistor is connected to
-  phototransistor.set_inverted(true);              // if receive signal is inverted (Laser on = logic 0) set this to true
-  phototransistor.begin();                         // initialize the receiver
+  phototransistor.set_speed(2000);                // laser receive speed - should be 500+ bits/second, nominal 2000 (=2KHz). Don't mess with this unless you know what you're doing!
+  phototransistor.set_rxpin(PIN_PHOTOTRANSISTOR); // pin the phototransistor is connected to
+  phototransistor.set_inverted(true);             // if receive signal is inverted (Laser on = logic 0) set this to true
+  phototransistor.begin();                        // initialize the receiver
 
   pinMode(PIN_RX_STATUS, OUTPUT);
-  
+
   LCDInit(); //Start the LCD
   /* Cosmetic frivolity on power-up. */
   LCDClear();
@@ -120,129 +118,135 @@ void setup()
    receive speed to receive each half bit. Don't mess with this! */
 ISR(TIMER2_COMPA_vect)
 {
-  phototransistor.receive();   // check for a received character every timer interrupt
+  phototransistor.receive(); // check for a received character every timer interrupt
 }
 
-void loop() 
+void loop()
 {
-  bool received = phototransistor.GetByte(c);     // get a character from the laser receiver if one is available
+  bool received = phototransistor.GetByte(c); // get a character from the laser receiver if one is available
   if (received)
   {
-   // if a character is ready, look at it
-   //Serial.println(c);
-   time_since_last_character_received = millis(); //pulls the time elapsed from the Arduino startup in and stores it
-   switch (c)
-    {       
-      // if the character is a terminator, store what was built in a variable and display it
-      case 0:
+    // if a character is ready, look at it
+    //Serial.println(c);
+    time_since_last_character_received = millis(); //pulls the time elapsed from the Arduino startup in and stores it
+    switch (c)
+    {
+    // if the character is a terminator, store what was built in a variable and display it
+    case 0:
       //Hacking in functionality using LCDCharacter rather than LCDString; it's clunkier but I don't trust LCDString after the last wrestling match I had.
       //This is a kludgy loop to manually /newline align the output.
       //Manually write the 'label' at the front of each line: "T:"
       //Then output the data payload.
       //Then tack on the unit at the end.
       //FIRST, DO THIS FOR CENTIGRADE
-        for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
+      for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
+      {
+        if (i == 0)
         {
-          if (i == 0)
-          {
-            LCDCharacter('T');
-          }
-          else if (i == 1)
-          { 
-            LCDCharacter(':');
-          }
-          else if (i == (strTemperatureC.length() + 3))
-          {
-            LCDCharacter('C');
-          }
-          else 
-          {
-            if (i < (strTemperatureC.length() + 2)) 
-            {
-              LCDCharacter(strTemperatureC[i - 2]);
-            }
-            else
-            {
-              LCDCharacter(' ');
-            }
-          }
-        //END OF THE CENTIGRADE BLOCK
+          LCDCharacter('T');
         }
-        //THEN, DO THIS FOR FAHRENHEIT
-        for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
+        else if (i == 1)
         {
-          if (i == 0)
-          {
-            LCDCharacter('T');
-          }
-          else if (i == 1)
-          { 
-            LCDCharacter(':');
-          }
-          else if (i == (strTemperatureF.length() + 3))
-          {
-            LCDCharacter('F');
-          }
-          else 
-          {
-            if (i < (strTemperatureF.length() + 2)) 
-            {
-              LCDCharacter(strTemperatureF[i - 2]);
-            }
-            else
-            {
-              LCDCharacter(' ');
-            }
-          }
-        //END OF THE FAHRENHEIT BLOCK
+          LCDCharacter(':');
         }
-        //FINALLY, DO THIS FOR THE HUMIDITY
-        for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
+        else if (i == (strTemperatureC.length() + 3))
         {
-          if (i == 0)
+          LCDCharacter('C');
+        }
+        else
+        {
+          if (i < (strTemperatureC.length() + 2))
           {
-            LCDCharacter('H');
-          }
-          else if (i == 1)
-          {
-            LCDCharacter(':');
-          }
-          else if (i == (strHumidity.length() + 2))
-          {
-            LCDCharacter('%');
+            LCDCharacter(strTemperatureC[i - 2]);
           }
           else
           {
-            if (i < (strHumidity.length() + 2))
-            {
-              LCDCharacter(strHumidity[i - 2]);
-            }
-            else
-            {
-              LCDCharacter(' ');
-            }
+            LCDCharacter(' ');
           }
-        //END OF THE HUMIDITY BLOCK
         }
-        break;       
-      case 70:         // ASCII F termination character for temperature Fahrenheit, use string built to this point for temp
-        strTemperatureF=parameterValue;
-        parameterValue="";
-        Serial.print("[RX] *~ Temp: "); Serial.print(strTemperatureF); Serial.println(" °F ~*");
-        break; 
-      case 84:         // ASCII T termination character for temperature Centigrade, use string built to this point for temp
-        strTemperatureC=parameterValue;
-        parameterValue="";
-        Serial.print("[RX] *= Temp: "); Serial.print(strTemperatureC); Serial.println(" °C =*");
-        break; 
-      case 72:        // ASCII H termination character for humidity, use string built to this point for humidity
-        strHumidity=parameterValue;
-        parameterValue="";
-        Serial.print("[RX] *- Hum:  "); Serial.print(strHumidity); Serial.println("%  -*");
-        break;
-      default :
-        parameterValue+=(char)c;  // keep building a string character-by-character until a terminator is found
-        break;
+        //END OF THE CENTIGRADE BLOCK
+      }
+      //THEN, DO THIS FOR FAHRENHEIT
+      for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
+      {
+        if (i == 0)
+        {
+          LCDCharacter('T');
+        }
+        else if (i == 1)
+        {
+          LCDCharacter(':');
+        }
+        else if (i == (strTemperatureF.length() + 3))
+        {
+          LCDCharacter('F');
+        }
+        else
+        {
+          if (i < (strTemperatureF.length() + 2))
+          {
+            LCDCharacter(strTemperatureF[i - 2]);
+          }
+          else
+          {
+            LCDCharacter(' ');
+          }
+        }
+        //END OF THE FAHRENHEIT BLOCK
+      }
+      //FINALLY, DO THIS FOR THE HUMIDITY
+      for (int i = 0; i < NOKIA_SCREEN_MAX_CHAR_WIDTH; i++)
+      {
+        if (i == 0)
+        {
+          LCDCharacter('H');
+        }
+        else if (i == 1)
+        {
+          LCDCharacter(':');
+        }
+        else if (i == (strHumidity.length() + 2))
+        {
+          LCDCharacter('%');
+        }
+        else
+        {
+          if (i < (strHumidity.length() + 2))
+          {
+            LCDCharacter(strHumidity[i - 2]);
+          }
+          else
+          {
+            LCDCharacter(' ');
+          }
+        }
+        //END OF THE HUMIDITY BLOCK
+      }
+      break;
+    case 70: // ASCII F termination character for temperature Fahrenheit, use string built to this point for temp
+      strTemperatureF = parameterValue;
+      parameterValue = "";
+      Serial.print("[RX] *~ Temp: ");
+      Serial.print(strTemperatureF);
+      Serial.println(" °F ~*");
+      break;
+    case 84: // ASCII T termination character for temperature Centigrade, use string built to this point for temp
+      strTemperatureC = parameterValue;
+      parameterValue = "";
+      Serial.print("[RX] *= Temp: ");
+      Serial.print(strTemperatureC);
+      Serial.println(" °C =*");
+      break;
+    case 72: // ASCII H termination character for humidity, use string built to this point for humidity
+      strHumidity = parameterValue;
+      parameterValue = "";
+      Serial.print("[RX] *- Hum:  ");
+      Serial.print(strHumidity);
+      Serial.println("%  -*");
+      break;
+    default:
+      parameterValue += (char)c; // keep building a string character-by-character until a terminator is found
+      break;
     }
   }
   else
@@ -255,25 +259,27 @@ void loop()
       digitalWrite(PIN_RX_STATUS, LOW); //Turn off the status LED
       if (antispam_counter >= ANTISPAM_COUNTER_MAX)
       {
-        Serial.print(antispam_counter); Serial.print("\t"); Serial.println("Waiting for laser.");
+        Serial.print(antispam_counter);
+        Serial.print("\t");
+        Serial.println("Waiting for laser.");
         switch (ellipsis_iterator)
         {
-          case 0:
-            LCDClear();
-            LCDString("No laser    ");
-            break;
-          case 1:
-            LCDString("No laser.   ");
-            break;
-          case 2:
-            LCDString("No laser..  ");
-            break;
-          case 3:
-            LCDString("No laser... ");
-            break;
-          default:
-            ellipsis_iterator = 0;
-            break;
+        case 0:
+          LCDClear();
+          LCDString("No laser    ");
+          break;
+        case 1:
+          LCDString("No laser.   ");
+          break;
+        case 2:
+          LCDString("No laser..  ");
+          break;
+        case 3:
+          LCDString("No laser... ");
+          break;
+        default:
+          ellipsis_iterator = 0;
+          break;
         }
         ellipsis_iterator++;
         antispam_counter = 0;
@@ -310,5 +316,5 @@ void flicker_the_LED(uint8_t LED_pin)
   if ((LED_sensor_status_flicker < 0) || (LED_sensor_status_flicker > 2))
   {
     LED_sensor_status_flicker = 0;
-  }  
+  }
 } // END of flicker_the_LED
